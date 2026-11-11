@@ -27,9 +27,15 @@ export function createId(prefix = 'id'): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
 }
 
+export interface TextDocumentInput {
+  name: string;
+  content: string;
+}
+
 export function buildHomeworkPrompt(
   config: GeneratorConfig,
-  hasAttachedImages = false
+  hasAttachedBinaryFiles = false,
+  textDocuments: TextDocumentInput[] = []
 ): string {
   const requestedParts: string[] = [];
 
@@ -64,9 +70,16 @@ export function buildHomeworkPrompt(
     );
   }
 
-  const imageNote = hasAttachedImages
-    ? '\nLƯU Ý ẢNH ĐÍNH KÈM: Giáo viên có gửi kèm ảnh trang sách/ghi chú buổi học. Hãy đọc kỹ nội dung từ vựng, cấu trúc câu và ngữ cảnh trong ảnh để ra bài tập bám sát chính xác bài học đó.'
+  const binaryNote = hasAttachedBinaryFiles
+    ? '\nLƯU Ý TÀI LIỆU / ẢNH ĐÍNH KÈM: Giáo viên có gửi kèm ảnh trang sách hoặc file PDF tài liệu buổi học (từ vựng / ngữ pháp). Hãy đọc kỹ nội dung trong đó để ra bài tập bám sát chính xác bài học.'
     : '';
+
+  const docsSection =
+    textDocuments.length > 0
+      ? `\n\nTÀI LIỆU BUỔI HỌC GIÁO VIÊN ĐÍNH KÈM (New Words / Ngữ pháp):\nHãy bám sát các từ vựng và điểm ngữ pháp trong tài liệu dưới đây để tạo bài tập:\n${textDocuments
+          .map((doc, idx) => `--- Tài liệu ${idx + 1}: ${doc.name} ---\n${doc.content}`)
+          .join('\n\n')}`
+      : '';
 
   const extraNote = config.extraInstructions?.trim()
     ? `\n- Yêu cầu bổ sung / Dạng bài khác từ giáo viên: ${config.extraInstructions.trim()}\n  (Nếu giáo viên yêu cầu thêm dạng bài khác như tìm từ khác loại / Odd one out, phát âm / trọng âm, tìm lỗi sai, dịch câu, hỏi đáp hội thoại, điền từ vào đoạn văn..., hãy tạo thêm section tương ứng và chọn "type" phù hợp nhất trong ["multiple_choice", "fill_blank", "word_form", "sentence_order", "rewrite"] để hệ thống hiển thị và tự chấm được; với bài phát âm/trọng âm nhớ in đậm hoặc đặt dấu * hoặc gạch chân phần âm cần xét rõ ràng bằng chữ hoa/ngoặc vuông, ví dụ: "ch[oo]se" hoặc gạch dưới ký hiệu dễ nhìn.)`
@@ -81,7 +94,7 @@ THÔNG TIN BUỔI HỌC:
 - Chủ đề / Bài học hôm nay: ${config.topic || 'Theo nội dung đính kèm'}
 - Ngữ pháp trọng tâm: ${config.grammarFocus || 'Tổng hợp phù hợp chủ đề'}
 - Từ vựng cần ôn: ${config.vocabularyFocus || 'Từ vựng liên quan chủ đề'}
-- Lỗi học sinh hay nhầm cần nhấn mạnh: ${config.studentMistakes || 'Không có ghi chú thêm'}${extraNote}${imageNote}
+- Lỗi học sinh hay nhầm cần nhấn mạnh: ${config.studentMistakes || 'Không có ghi chú thêm'}${extraNote}${binaryNote}${docsSection}
 
 YÊU CẦU CẤU TRÚC CÁC PHẦN:
 ${requestedParts.length > 0 ? requestedParts.join('\n') : '- Tạo các phần bài tập theo đúng yêu cầu bổ sung của giáo viên ở trên.'}

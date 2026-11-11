@@ -124,7 +124,7 @@ function isCorrect(question, studentAnswer) {
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '15mb' }));
+app.use(express.json({ limit: '25mb' }));
 
 // Health check
 app.get('/api/health', (_req, res) => {
