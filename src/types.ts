@@ -13,6 +13,7 @@ export interface Question {
   id: string;
   type: QuestionType;
   prompt: string;
+  imageUrl?: string; // Optional illustration attached to this question
   options?: string[]; // Used for multiple_choice and find_mistake
   words?: string[]; // Used for sentence_order
   hint?: string; // Optional base verb, keyword, or word cue
@@ -25,6 +26,7 @@ export interface HomeworkSection {
   title: string;
   instruction: string;
   type: QuestionType;
+  imageUrl?: string; // Optional shared illustration for this section
   readingPassage?: string;
   listeningScript?: string;
   audioUrl?: string;

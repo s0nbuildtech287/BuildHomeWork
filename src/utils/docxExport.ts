@@ -2,6 +2,7 @@ import {
   AlignmentType,
   BorderStyle,
   Document,
+  ImageRun,
   Packer,
   PageBreak,
   Paragraph,
@@ -17,6 +18,58 @@ import { Homework } from '../types';
 import { isChoiceQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from './grading';
 
 export type DocxExportMode = 'student' | 'student_with_key' | 'teacher';
+
+async function buildImageParagraph(
+  imageUrl: string,
+  indentLeft = 0
+): Promise<Paragraph | null> {
+  try {
+    const res = await fetch(imageUrl);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+
+    const objectUrl = URL.createObjectURL(blob);
+    let width = 320;
+    let height = 200;
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error('Invalid image'));
+        el.src = objectUrl;
+      });
+      const maxW = 360;
+      const maxH = 240;
+      const ratio = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+      width = Math.max(40, Math.round(img.naturalWidth * ratio));
+      height = Math.max(40, Math.round(img.naturalHeight * ratio));
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+
+    const mime = blob.type.toLowerCase();
+    const imgType: 'png' | 'jpg' | 'gif' = mime.includes('png')
+      ? 'png'
+      : mime.includes('gif')
+        ? 'gif'
+        : 'jpg';
+
+    return new Paragraph({
+      spacing: { before: 60, after: 100 },
+      indent: indentLeft > 0 ? { left: indentLeft } : undefined,
+      children: [
+        new ImageRun({
+          data: arrayBuffer,
+          transformation: { width, height },
+          type: imgType,
+        }),
+      ],
+    });
+  } catch {
+    return null;
+  }
+}
 
 function safeFileName(title: string): string {
   return (
@@ -211,6 +264,11 @@ export async function exportHomeworkToDocx(
       );
     }
 
+    if (section.imageUrl) {
+      const secImgPara = await buildImageParagraph(section.imageUrl);
+      if (secImgPara) children.push(secImgPara);
+    }
+
     if (section.readingPassage) {
       children.push(
         new Paragraph({
@@ -266,6 +324,11 @@ export async function exportHomeworkToDocx(
             ],
           })
         );
+      }
+
+      if (q.imageUrl) {
+        const qImgPara = await buildImageParagraph(q.imageUrl, 320);
+        if (qImgPara) children.push(qImgPara);
       }
 
       if (isChoiceQuestion(q) && q.options?.length) {

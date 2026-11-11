@@ -39,6 +39,7 @@ loadDotEnv();
 const PORT = process.env.PORT || 3001;
 const DATA_DIR = path.join(__dirname, 'data');
 const AUDIO_DIR = path.join(DATA_DIR, 'audio');
+const IMAGE_DIR = path.join(DATA_DIR, 'images');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const DIST_DIR = path.join(__dirname, 'dist');
 
@@ -48,6 +49,9 @@ function ensureDb() {
   }
   if (!fs.existsSync(AUDIO_DIR)) {
     fs.mkdirSync(AUDIO_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(IMAGE_DIR)) {
+    fs.mkdirSync(IMAGE_DIR, { recursive: true });
   }
   if (!fs.existsSync(DB_FILE)) {
     const initial = { homeworks: [], submissions: [] };
@@ -152,6 +156,37 @@ app.use(express.json({ limit: '25mb' }));
 
 ensureDb();
 app.use('/api/audio', express.static(AUDIO_DIR));
+app.use('/api/images', express.static(IMAGE_DIR));
+
+// Upload image attached or pasted by teacher into a question/section
+app.post('/api/images/upload', (req, res) => {
+  const { filename = 'image.png', base64Data, mimeType = 'image/png' } = req.body || {};
+  if (!base64Data || typeof base64Data !== 'string') {
+    return res.status(400).json({ error: 'Thiếu dữ liệu ảnh để tải lên.' });
+  }
+
+  const extMatch = String(filename).toLowerCase().match(/\.(png|jpg|jpeg|gif|webp)$/);
+  const extFromMime =
+    mimeType === 'image/jpeg'
+      ? '.jpg'
+      : mimeType === 'image/gif'
+        ? '.gif'
+        : mimeType === 'image/webp'
+          ? '.webp'
+          : '.png';
+  const ext = extMatch ? `.${extMatch[1] === 'jpeg' ? 'jpg' : extMatch[1]}` : extFromMime;
+
+  const outName = `img_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}${ext}`;
+  const outPath = path.join(IMAGE_DIR, outName);
+
+  try {
+    ensureDb();
+    fs.writeFileSync(outPath, Buffer.from(base64Data, 'base64'));
+    return res.json({ imageUrl: `/api/images/${outName}` });
+  } catch (err) {
+    return res.status(500).json({ error: err?.message || 'Không lưu được file ảnh.' });
+  }
+});
 
 // Upload MP3 / audio file attached by teacher
 app.post('/api/audio/upload', (req, res) => {

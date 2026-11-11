@@ -99,6 +99,16 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                 </div>
               )}
 
+              {section.imageUrl && (
+                <div className="avoid-break mb-3">
+                  <img
+                    src={section.imageUrl}
+                    alt={section.title}
+                    className="max-h-60 w-auto rounded border border-slate-300 object-contain"
+                  />
+                </div>
+              )}
+
               {section.readingPassage && (
                 <div className="mb-3 rounded border-l-4 border-slate-400 bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-800 whitespace-pre-line">
                   {section.readingPassage}
@@ -138,6 +148,16 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                         <p className="whitespace-pre-line">
                           <strong>{qNum}.</strong> {q.prompt}
                         </p>
+                      )}
+
+                      {q.imageUrl && (
+                        <div className="mt-1.5 pl-5">
+                          <img
+                            src={q.imageUrl}
+                            alt={`Hình câu ${qNum}`}
+                            className="max-h-48 w-auto rounded border border-slate-300 object-contain"
+                          />
+                        </div>
                       )}
 
                       {isChoiceQuestion(q) && q.options?.length && (

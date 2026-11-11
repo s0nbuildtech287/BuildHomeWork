@@ -330,6 +330,16 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                 </div>
               )}
 
+              {section.imageUrl && (
+                <div className="mt-3">
+                  <img
+                    src={section.imageUrl}
+                    alt={section.title}
+                    className="max-h-72 w-auto rounded-xl border border-slate-200 object-contain"
+                  />
+                </div>
+              )}
+
               {section.readingPassage && (
                 <div className="mt-3 rounded-xl border-l-4 border-indigo-400 bg-slate-50 p-4 text-sm leading-relaxed text-slate-800 whitespace-pre-line">
                   {section.readingPassage}
@@ -370,6 +380,17 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                             <XCircle className="h-5 w-5 shrink-0 text-rose-600" />
                           ))}
                       </div>
+
+                      {/* Question Image */}
+                      {q.imageUrl && (
+                        <div className="mt-2.5">
+                          <img
+                            src={q.imageUrl}
+                            alt={`Hình minh họa câu ${num}`}
+                            className="max-h-60 w-auto rounded-xl border border-slate-200 bg-white object-contain"
+                          />
+                        </div>
+                      )}
 
                       {/* Multiple Choice & Find Mistake */}
                       {isChoiceQuestion(q) && q.options && (

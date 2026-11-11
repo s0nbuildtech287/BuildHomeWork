@@ -9,6 +9,7 @@ import {
   FileText,
   Globe,
   Headphones,
+  ImagePlus,
   Loader2,
   Plus,
   Printer,
@@ -17,6 +18,7 @@ import {
   Trash2,
   Users,
   Volume2,
+  X,
 } from 'lucide-react';
 import { generateTtsAudio } from '../services/gemini';
 import { fetchSubmissions } from '../services/storage';
@@ -28,6 +30,7 @@ import {
   resolveCorrectOptionIndex,
   stripOptionPrefix,
 } from '../utils/grading';
+import { extractClipboardImage, uploadQuestionImage } from '../utils/imageUpload';
 import { createId } from '../utils/promptBuilder';
 import { buildServerQuizUrl, buildStandaloneQuizUrl } from '../utils/shareCodec';
 
@@ -58,6 +61,7 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [generatingAudioSecId, setGeneratingAudioSecId] = useState<string | null>(null);
+  const [uploadingImageKey, setUploadingImageKey] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(homework);
@@ -166,6 +170,33 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
         };
       }),
     }));
+  };
+
+  const handleAttachSectionImage = async (sectionId: string, file: File) => {
+    setUploadingImageKey(`sec_${sectionId}`);
+    try {
+      const imageUrl = await uploadQuestionImage(file);
+      setDraft((prev) => ({
+        ...prev,
+        sections: prev.sections.map((s) => (s.id === sectionId ? { ...s, imageUrl } : s)),
+      }));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Không chèn được ảnh.');
+    } finally {
+      setUploadingImageKey(null);
+    }
+  };
+
+  const handleAttachQuestionImage = async (sectionId: string, qId: string, file: File) => {
+    setUploadingImageKey(`q_${qId}`);
+    try {
+      const imageUrl = await uploadQuestionImage(file);
+      updateQuestion(sectionId, qId, { imageUrl });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Không chèn được ảnh.');
+    } finally {
+      setUploadingImageKey(null);
+    }
   };
 
   const handleRegenerateAudio = async (sec: HomeworkSection) => {
@@ -508,14 +539,59 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                     className="w-full text-xs text-slate-500 italic focus:outline-none"
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => addQuestion(section.id)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Thêm câu
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                    {uploadingImageKey === `sec_${section.id}` ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" />
+                    ) : (
+                      <ImagePlus className="h-3.5 w-3.5 text-indigo-600" />
+                    )}
+                    Ảnh chung
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleAttachSectionImage(section.id, f);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => addQuestion(section.id)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Thêm câu
+                  </button>
+                </div>
               </div>
+
+              {section.imageUrl && (
+                <div className="relative mb-4 inline-block rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  <img
+                    src={section.imageUrl}
+                    alt="Section illustration"
+                    className="max-h-52 w-auto rounded-lg object-contain"
+                  />
+                  <button
+                    type="button"
+                    title="Gỡ ảnh này"
+                    onClick={() =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        sections: prev.sections.map((s) =>
+                          s.id === section.id ? { ...s, imageUrl: undefined } : s
+                        ),
+                      }))
+                    }
+                    className="absolute top-3 right-3 rounded-full bg-slate-900/75 p-1 text-white hover:bg-red-600"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
 
               {section.readingPassage !== undefined && section.readingPassage !== '' && (
                 <div className="mb-4">
@@ -644,21 +720,71 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                   return (
                     <div
                       key={q.id}
-                      className="rounded-xl border border-slate-200 bg-slate-50/50 p-4"
+                      onPaste={(e) => {
+                        const img = extractClipboardImage(e);
+                        if (img) {
+                          e.preventDefault();
+                          handleAttachQuestionImage(section.id, q.id, img);
+                        }
+                      }}
+                      className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 focus-within:border-indigo-300"
                     >
                       <div className="flex items-start gap-2">
                         <span className="mt-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
                           {qNum}
                         </span>
                         <div className="flex-1 space-y-2.5">
-                          <input
-                            type="text"
-                            value={q.prompt}
-                            onChange={(e) =>
-                              updateQuestion(section.id, q.id, { prompt: e.target.value })
-                            }
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
-                          />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input
+                              type="text"
+                              value={q.prompt}
+                              onChange={(e) =>
+                                updateQuestion(section.id, q.id, { prompt: e.target.value })
+                              }
+                              className="min-w-[220px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
+                            />
+                            <label
+                              title="Chọn file ảnh hoặc bấm vào câu hỏi rồi nhấn Ctrl+V để dán ảnh"
+                              className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                            >
+                              {uploadingImageKey === `q_${q.id}` ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" />
+                              ) : (
+                                <ImagePlus className="h-3.5 w-3.5 text-indigo-600" />
+                              )}
+                              Chèn / Ctrl+V ảnh
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) handleAttachQuestionImage(section.id, q.id, f);
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          {q.imageUrl && (
+                            <div className="relative inline-block rounded-lg border border-slate-200 bg-white p-1.5">
+                              <img
+                                src={q.imageUrl}
+                                alt={`Câu ${qNum}`}
+                                className="max-h-44 w-auto rounded object-contain"
+                              />
+                              <button
+                                type="button"
+                                title="Gỡ ảnh khỏi câu này"
+                                onClick={() =>
+                                  updateQuestion(section.id, q.id, { imageUrl: undefined })
+                                }
+                                className="absolute top-2.5 right-2.5 rounded-full bg-slate-900/75 p-1 text-white hover:bg-red-600"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
 
                           {q.type === 'sentence_order' && (
                             <div>
