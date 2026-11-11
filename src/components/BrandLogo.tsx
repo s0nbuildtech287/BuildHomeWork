@@ -13,3 +13,4 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({ className = 'h-10 w-10' })
     />
   );
 };
+
