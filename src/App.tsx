@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { FolderHeart, GraduationCap, Settings, Sparkles } from 'lucide-react';
+import { FolderHeart, Settings, Sparkles } from 'lucide-react';
+import { BrandLogo } from './components/BrandLogo';
 import { GeneratorView } from './components/GeneratorView';
 import { HomeworkEditor } from './components/HomeworkEditor';
 import { LibraryView } from './components/LibraryView';
@@ -174,9 +175,7 @@ export function App() {
             onClick={() => setPage('generate')}
             className="flex cursor-pointer items-center gap-2.5"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
-              <GraduationCap className="h-5 w-5" />
-            </div>
+            <BrandLogo className="h-10 w-10 rounded-xl shadow-xs" />
             <div>
               <h1 className="text-base font-bold text-slate-900 leading-tight">
                 Trợ Lý Giao Bài Tập Tiếng Anh

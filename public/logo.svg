@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bhw-bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4338CA" />
+      <stop offset="100%" stop-color="#2563EB" />
+    </linearGradient>
+    <linearGradient id="bhw-page" x1="16" y1="20" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#EEF2FF" />
+    </linearGradient>
+  </defs>
+
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#bhw-bg)" />
+
+  <path
+    d="M14 23.5C14 21.567 15.567 20 17.5 20H28.5C30.433 20 32 21.567 32 23.5V47.5C32 46.119 30.881 45 29.5 45H16.5C15.119 45 14 43.881 14 42.5V23.5Z"
+    fill="#FFFFFF"
+  />
+  <path
+    d="M50 23.5C50 21.567 48.433 20 46.5 20H35.5C33.567 20 32 21.567 32 23.5V47.5C32 46.119 33.119 45 34.5 45H47.5C48.881 45 50 43.881 50 42.5V23.5Z"
+    fill="url(#bhw-page)"
+  />
+
+  <path d="M32 22.5V47.5" stroke="#C7D2FE" stroke-width="1.6" stroke-linecap="round" />
+
+  <path d="M18.5 27.5H27.5" stroke="#6366F1" stroke-width="2.2" stroke-linecap="round" />
+  <path d="M18.5 33.5H27.5" stroke="#A5B4FC" stroke-width="2.2" stroke-linecap="round" />
+  <path d="M18.5 39.5H24.5" stroke="#A5B4FC" stroke-width="2.2" stroke-linecap="round" />
+
+  <path
+    d="M37 33.5L40.5 37L46.5 29.5"
+    stroke="#4F46E5"
+    stroke-width="2.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <path
+    d="M47 10L48.6 14.4L53 16L48.6 17.6L47 22L45.4 17.6L41 16L45.4 14.4L47 10Z"
+    fill="#FBBF24"
+  />
+</svg>

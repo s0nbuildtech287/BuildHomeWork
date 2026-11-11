@@ -9,6 +9,7 @@ import {
   Volume2,
   XCircle,
 } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
 import { saveLocalSubmission } from '../services/storage';
 import { GradedQuestionResult, Homework, StudentSubmission } from '../types';
 import { gradeHomework, isChoiceQuestion, stripOptionPrefix } from '../utils/grading';
@@ -179,18 +180,21 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
         )}
 
         {/* Header */}
-        <div className="rounded-2xl border border-indigo-100 bg-white p-6 shadow-xs">
-          {(homework.centerName || homework.teacherName) && (
-            <p className="text-xs font-bold tracking-wide text-indigo-600 uppercase">
-              {[homework.centerName, homework.teacherName ? `GV: ${homework.teacherName}` : '']
-                .filter(Boolean)
-                .join(' • ')}
-            </p>
-          )}
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">{homework.title}</h1>
-          {homework.subtitle && (
-            <p className="mt-1 text-sm text-slate-600">{homework.subtitle}</p>
-          )}
+        <div className="flex items-start gap-3.5 rounded-2xl border border-indigo-100 bg-white p-6 shadow-xs">
+          <BrandLogo className="mt-0.5 h-11 w-11 rounded-xl shadow-xs" />
+          <div className="min-w-0 flex-1">
+            {(homework.centerName || homework.teacherName) && (
+              <p className="text-xs font-bold tracking-wide text-indigo-600 uppercase">
+                {[homework.centerName, homework.teacherName ? `GV: ${homework.teacherName}` : '']
+                  .filter(Boolean)
+                  .join(' • ')}
+              </p>
+            )}
+            <h1 className="mt-0.5 text-2xl font-bold text-slate-900">{homework.title}</h1>
+            {homework.subtitle && (
+              <p className="mt-1 text-sm text-slate-600">{homework.subtitle}</p>
+            )}
+          </div>
         </div>
 
         {/* Score Result Banner */}
