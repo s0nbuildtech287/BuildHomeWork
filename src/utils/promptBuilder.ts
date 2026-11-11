@@ -77,8 +77,23 @@ export function buildHomeworkPrompt(
   }
   if (config.counts.listening_questions > 0 || hasAttachedAudio) {
     const listenCount = config.counts.listening_questions > 0 ? config.counts.listening_questions : 4;
+    const style = config.listeningStyle || 'multiple_choice';
+
+    let styleInstruction =
+      'Dạng Trắc nghiệm nghe hiểu (type: "multiple_choice", mỗi câu có 4 lựa chọn A/B/C/D).';
+    if (style === 'note_fill') {
+      styleInstruction =
+        'Dạng ĐIỀN TỪ / ĐIỀN PHIẾU KHÔNG CHO ĐÁP ÁN GỢI Ý (kiểu IELTS Note/Form Completion): section có "type": "fill_blank", "wordBank": [] (BẮT BUỘC ĐỂ RỖNG), "instruction": "Write ONE WORD AND/OR A NUMBER for each answer.". Mỗi câu "prompt" là 1 dòng ghi chú ngắn có chỗ trống ______ ở giữa hoặc cuối câu (VD: "Postcode: ______", "Got on bus at ______ Street", "Reason for trip: visit to the ______"); có thể dùng "readingPassage" làm tiêu đề/thông tin nền của phiếu nếu cần (không chứa đáp án). "correctAnswer" CHỈ là 1 từ hoặc con số khớp nguyên văn với "listeningScript".';
+    } else if (style === 'matching_box') {
+      styleInstruction =
+        'Dạng NỐI THÔNG TIN TỪ BẢNG LỰA CHỌN A-G (kiểu Cambridge/IELTS Matching Box): section có "type": "fill_blank", field "wordBank" là mảng các lựa chọn đánh nhãn từ A trở đi (nhiều hơn số câu hỏi 1-2 phương án nhiễu, VD: ["A. experience on stage", "B. original, new ideas", "C. parenting skills", ...]), "instruction": "Choose the correct letter from the box next to each item.". Mỗi câu hỏi là 1 mục cần nối (VD: "Fundraising"), "type": "fill_blank", "correctAnswer" ghi chữ cái đúng kèm nội dung cách nhau bởi | (VD: "E | E. retail experience | retail experience").';
+    } else if (style === 'true_false') {
+      styleInstruction =
+        'Dạng Đúng / Sai (type: "multiple_choice", mỗi câu có đúng 2 lựa chọn "options": ["True", "False"]).';
+    }
+
     requestedParts.push(
-      `- 1 section Bài Nghe (Listening, type: "multiple_choice", title có chữ "Listening") có field "listeningScript" (lời thoại / bài đọc tiếng Anh hoàn chỉnh 60-150 từ, KHÔNG dùng ký hiệu lạ, dùng câu tự nhiên dễ đọc thành âm thanh; nếu có file âm thanh đính kèm thì nghe đúng file âm thanh đó để chép lại nội dung vào "listeningScript") kèm ${listenCount} câu hỏi nghe hiểu.`
+      `- 1 section Bài Nghe (Listening, title có chữ "Listening") có field "listeningScript" (lời thoại / bài đọc tiếng Anh hoàn chỉnh 70-180 từ, KHÔNG dùng ký hiệu lạ, dùng câu tự nhiên dễ đọc thành âm thanh; nếu có file âm thanh đính kèm thì nghe đúng file âm thanh đó để chép lại nội dung vào "listeningScript") kèm ${listenCount} câu hỏi theo đúng định dạng sau: ${styleInstruction}`
     );
   }
   if (config.counts.writing > 0) {

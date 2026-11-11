@@ -279,8 +279,23 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
               )}
 
               {section.wordBank && section.wordBank.length > 0 && (
-                <div className="mt-3 rounded-xl bg-slate-100 px-3.5 py-2 text-xs text-slate-700">
-                  <strong>Gợi ý từ:</strong> {section.wordBank.join('  •  ')}
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+                  {section.wordBank.every((w) => /^[A-Za-z][.)]\s+/.test(w.trim())) ? (
+                    <div className="space-y-1">
+                      <div className="mb-1.5 text-xs font-bold text-slate-600 uppercase">
+                        Bảng lựa chọn:
+                      </div>
+                      {section.wordBank.map((item, idx) => (
+                        <div key={idx} className="font-medium">
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-700">
+                      <strong>Gợi ý từ:</strong> {section.wordBank.join('  •  ')}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -472,14 +487,44 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                       {(q.type === 'fill_blank' ||
                         q.type === 'word_form' ||
                         q.type === 'rewrite') && (
-                        <input
-                          type="text"
-                          disabled={Boolean(submission)}
-                          value={val}
-                          onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
-                          placeholder="Nhập câu trả lời của em..."
-                          className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-                        />
+                        <div className="mt-3 space-y-2">
+                          {q.type === 'fill_blank' &&
+                            section.wordBank &&
+                            section.wordBank.length > 0 &&
+                            section.wordBank.every((w) => /^[A-Za-z][.)]\s+/.test(w.trim())) && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {section.wordBank.map((item, idx) => {
+                                  const letter = item.trim().charAt(0).toUpperCase();
+                                  const selected = val.trim().toUpperCase() === letter;
+                                  return (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      disabled={Boolean(submission)}
+                                      onClick={() =>
+                                        setAnswers((p) => ({ ...p, [q.id]: letter }))
+                                      }
+                                      className={`rounded-lg border px-3 py-1 text-xs font-bold transition ${
+                                        selected
+                                          ? 'border-indigo-600 bg-indigo-600 text-white'
+                                          : 'border-slate-300 bg-white text-slate-700 hover:bg-indigo-50'
+                                      }`}
+                                    >
+                                      {letter}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          <input
+                            type="text"
+                            disabled={Boolean(submission)}
+                            value={val}
+                            onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
+                            placeholder="Nhập câu trả lời của em..."
+                            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                          />
+                        </div>
                       )}
 
                       {/* Writing */}

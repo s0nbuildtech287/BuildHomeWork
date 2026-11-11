@@ -614,6 +614,35 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                 </div>
               )}
 
+              {section.wordBank && section.wordBank.length > 0 && (
+                <div className="mb-4">
+                  <label className="mb-1 block text-xs font-semibold text-slate-500">
+                    Bảng từ / Các lựa chọn nối (mỗi dòng 1 mục)
+                  </label>
+                  <textarea
+                    rows={Math.min(8, Math.max(3, section.wordBank.length))}
+                    value={section.wordBank.join('\n')}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        sections: prev.sections.map((s) =>
+                          s.id === section.id
+                            ? {
+                                ...s,
+                                wordBank: e.target.value
+                                  .split(/\r?\n/)
+                                  .map((line) => line.trim())
+                                  .filter(Boolean),
+                              }
+                            : s
+                        ),
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed text-slate-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              )}
+
               {(section.listeningScript !== undefined || section.audioUrl) && (
                 <div className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50/50 p-4 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">

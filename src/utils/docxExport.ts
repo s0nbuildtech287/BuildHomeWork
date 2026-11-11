@@ -252,16 +252,51 @@ export async function exportHomeworkToDocx(
     }
 
     if (section.wordBank && section.wordBank.length > 0) {
-      children.push(
-        new Paragraph({
-          spacing: { after: 120 },
-          shading: { type: ShadingType.CLEAR, fill: 'F1F5F9', color: 'auto' },
-          children: [
-            new TextRun({ text: 'Word bank:  ', bold: true, size: 21 }),
-            new TextRun({ text: section.wordBank.join('   •   '), size: 21 }),
-          ],
-        })
+      const isMatchingBox = section.wordBank.every((w) =>
+        /^[A-Za-z][.)]\s+/.test(w.trim())
       );
+      if (isMatchingBox) {
+        children.push(
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    shading: { type: ShadingType.CLEAR, fill: 'F8FAFC', color: 'auto' },
+                    borders: {
+                      top: { style: BorderStyle.SINGLE, size: 6, color: '94A3B8' },
+                      bottom: { style: BorderStyle.SINGLE, size: 6, color: '94A3B8' },
+                      left: { style: BorderStyle.SINGLE, size: 6, color: '94A3B8' },
+                      right: { style: BorderStyle.SINGLE, size: 6, color: '94A3B8' },
+                    },
+                    margins: { top: 100, bottom: 100, left: 160, right: 160 },
+                    children: section.wordBank.map(
+                      (item) =>
+                        new Paragraph({
+                          spacing: { after: 50 },
+                          children: [new TextRun({ text: item, size: 21 })],
+                        })
+                    ),
+                  }),
+                ],
+              }),
+            ],
+          })
+        );
+        children.push(new Paragraph({ spacing: { after: 100 }, children: [] }));
+      } else {
+        children.push(
+          new Paragraph({
+            spacing: { after: 120 },
+            shading: { type: ShadingType.CLEAR, fill: 'F1F5F9', color: 'auto' },
+            children: [
+              new TextRun({ text: 'Word bank:  ', bold: true, size: 21 }),
+              new TextRun({ text: section.wordBank.join('   •   '), size: 21 }),
+            ],
+          })
+        );
+      }
     }
 
     if (section.imageUrl) {

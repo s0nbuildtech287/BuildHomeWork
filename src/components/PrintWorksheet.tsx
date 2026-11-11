@@ -94,8 +94,18 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
               )}
 
               {section.wordBank && section.wordBank.length > 0 && (
-                <div className="mb-3 rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm">
-                  <strong>Word bank:</strong> {section.wordBank.join('   •   ')}
+                <div className="avoid-break mb-3 rounded border border-slate-400 bg-slate-50 px-4 py-2.5 text-sm">
+                  {section.wordBank.every((w) => /^[A-Za-z][.)]\s+/.test(w.trim())) ? (
+                    <div className="space-y-1">
+                      {section.wordBank.map((item, idx) => (
+                        <div key={idx}>{item}</div>
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      <strong>Word bank:</strong> {section.wordBank.join('   •   ')}
+                    </>
+                  )}
                 </div>
               )}
 

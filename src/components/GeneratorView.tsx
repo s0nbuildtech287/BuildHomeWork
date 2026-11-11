@@ -19,6 +19,7 @@ import {
   AppSettings,
   GeneratorConfig,
   Homework,
+  ListeningStyle,
   SectionCountConfig,
   TargetLevel,
 } from '../types';
@@ -670,41 +671,66 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {questionTypesMeta.map((item) => {
             const count = config.counts[item.key];
+            const showListeningStyle =
+              item.key === 'listening_questions' && (count > 0 || hasAttachedAudio);
+
             return (
               <div
                 key={item.key}
-                className={`flex items-center justify-between rounded-xl border p-3 ${
+                className={`flex flex-col justify-between gap-2.5 rounded-xl border p-3 ${
                   count > 0 ? 'border-indigo-200 bg-indigo-50/40' : 'border-slate-200 bg-slate-50/40'
                 }`}
               >
-                <div className="pr-2">
-                  <div className="text-sm font-semibold text-slate-800">{item.label}</div>
-                  <div className="text-[11px] text-slate-500">{item.desc}</div>
+                <div className="flex items-center justify-between">
+                  <div className="pr-2">
+                    <div className="text-sm font-semibold text-slate-800">{item.label}</div>
+                    <div className="text-[11px] text-slate-500">{item.desc}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => updateCount(item.key, -1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-bold text-slate-700 hover:bg-slate-100"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      max={50}
+                      value={count}
+                      onChange={(e) => setExactCount(item.key, Number(e.target.value))}
+                      className="w-11 rounded-lg border border-slate-200 bg-white py-1 text-center text-sm font-bold text-slate-900 focus:border-indigo-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => updateCount(item.key, 1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-bold text-slate-700 hover:bg-slate-100"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => updateCount(item.key, -1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-bold text-slate-700 hover:bg-slate-100"
-                  >
-                    -
-                  </button>
-                  <input
-                    type="number"
-                    min={0}
-                    max={50}
-                    value={count}
-                    onChange={(e) => setExactCount(item.key, Number(e.target.value))}
-                    className="w-11 rounded-lg border border-slate-200 bg-white py-1 text-center text-sm font-bold text-slate-900 focus:border-indigo-500 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => updateCount(item.key, 1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-bold text-slate-700 hover:bg-slate-100"
-                  >
-                    +
-                  </button>
-                </div>
+
+                {showListeningStyle && (
+                  <div className="border-t border-indigo-100 pt-2">
+                    <select
+                      value={config.listeningStyle || 'multiple_choice'}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          listeningStyle: e.target.value as ListeningStyle,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-indigo-900 focus:border-indigo-500 focus:outline-none"
+                    >
+                      <option value="multiple_choice">Kiểu: Khoanh trắc nghiệm A/B/C/D</option>
+                      <option value="note_fill">Kiểu: Điền từ / Điền phiếu (không cho đáp án)</option>
+                      <option value="matching_box">Kiểu: Nối bảng lựa chọn A–G</option>
+                      <option value="true_false">Kiểu: Đúng / Sai (True / False)</option>
+                    </select>
+                  </div>
+                )}
               </div>
             );
           })}

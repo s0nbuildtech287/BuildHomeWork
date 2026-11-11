@@ -1,5 +1,7 @@
 export type TargetLevel = 'elementary' | 'secondary' | 'communication';
 
+export type ListeningStyle = 'multiple_choice' | 'note_fill' | 'matching_box' | 'true_false';
+
 export type QuestionType =
   | 'multiple_choice'
   | 'fill_blank'
@@ -71,6 +73,7 @@ export interface GeneratorConfig {
   vocabularyFocus: string;
   studentMistakes: string;
   extraInstructions?: string;
+  listeningStyle?: ListeningStyle;
   difficulty: 'easy' | 'medium' | 'hard';
   counts: SectionCountConfig;
 }

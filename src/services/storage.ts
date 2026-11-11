@@ -15,6 +15,7 @@ export const DEFAULT_GENERATOR_CONFIG: GeneratorConfig = {
   vocabularyFocus: '',
   studentMistakes: '',
   extraInstructions: '',
+  listeningStyle: 'multiple_choice',
   difficulty: 'medium',
   counts: {
     multiple_choice: 6,
