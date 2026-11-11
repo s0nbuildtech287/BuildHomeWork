@@ -1,4 +1,4 @@
-import { GeneratorConfig, Homework } from '../types';
+import { GeneratorConfig, Homework, TargetLevel } from '../types';
 import { AttachedMaterial } from '../utils/fileExtractor';
 import { buildHomeworkPrompt, parseAiHomeworkResponse } from '../utils/promptBuilder';
 
@@ -34,6 +34,54 @@ export async function generateTtsAudio(params: {
     throw new Error(data?.error || 'Không tạo được file MP3 cho bài nghe.');
   }
   return String(data.audioUrl);
+}
+
+export async function attachAudioToListeningSections(
+  homework: Homework,
+  level: TargetLevel,
+  audioFiles: Array<Extract<AttachedMaterial, { kind: 'audio' }>> = []
+): Promise<Homework> {
+  let uploadedAudioUrl: string | undefined;
+  if (audioFiles.length > 0) {
+    try {
+      uploadedAudioUrl = await uploadAudioToServer({
+        filename: audioFiles[0].name,
+        base64Data: audioFiles[0].base64Data,
+        mimeType: audioFiles[0].mimeType,
+      });
+    } catch {
+      uploadedAudioUrl = undefined;
+    }
+  }
+
+  const defaultVoice = 'en-US-AriaNeural';
+  const defaultRate = level === 'elementary' ? '-15%' : '+0%';
+
+  for (let i = 0; i < homework.sections.length; i++) {
+    const sec = homework.sections[i];
+    const isListeningSec =
+      Boolean(sec.listeningScript) || sec.title.toLowerCase().includes('listen');
+
+    if (!isListeningSec) continue;
+
+    if (uploadedAudioUrl) {
+      sec.audioUrl = uploadedAudioUrl;
+    } else if (sec.listeningScript && !sec.audioUrl) {
+      try {
+        sec.audioUrl = await generateTtsAudio({
+          text: sec.listeningScript,
+          voice: defaultVoice,
+          rate: defaultRate,
+        });
+        sec.audioVoice = defaultVoice;
+        sec.audioRate = defaultRate;
+      } catch {
+        // Keep listeningScript so browser speechSynthesis fallback still works
+      }
+    }
+  }
+
+  return homework;
 }
 
 export async function generateHomeworkWithGemini(params: {
@@ -131,46 +179,5 @@ export async function generateHomeworkWithGemini(params: {
     centerName,
   });
 
-  // Attach uploaded MP3 or synthesize MP3 via edge-tts for listening sections
-  let uploadedAudioUrl: string | undefined;
-  if (audioFiles.length > 0) {
-    try {
-      uploadedAudioUrl = await uploadAudioToServer({
-        filename: audioFiles[0].name,
-        base64Data: audioFiles[0].base64Data,
-        mimeType: audioFiles[0].mimeType,
-      });
-    } catch {
-      uploadedAudioUrl = undefined;
-    }
-  }
-
-  const defaultVoice = 'en-US-AriaNeural';
-  const defaultRate = config.level === 'elementary' ? '-15%' : '+0%';
-
-  for (let i = 0; i < homework.sections.length; i++) {
-    const sec = homework.sections[i];
-    const isListeningSec =
-      Boolean(sec.listeningScript) || sec.title.toLowerCase().includes('listen');
-
-    if (!isListeningSec) continue;
-
-    if (uploadedAudioUrl) {
-      sec.audioUrl = uploadedAudioUrl;
-    } else if (sec.listeningScript) {
-      try {
-        sec.audioUrl = await generateTtsAudio({
-          text: sec.listeningScript,
-          voice: defaultVoice,
-          rate: defaultRate,
-        });
-        sec.audioVoice = defaultVoice;
-        sec.audioRate = defaultRate;
-      } catch {
-        // Keep listeningScript so browser speechSynthesis fallback still works
-      }
-    }
-  }
-
-  return homework;
+  return attachAudioToListeningSections(homework, config.level, audioFiles);
 }

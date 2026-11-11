@@ -204,6 +204,9 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
   };
 
   const totalQ = countHomeworkQuestions(draft);
+  const listeningSections = draft.sections.filter(
+    (s) => Boolean(s.listeningScript) || Boolean(s.audioUrl) || s.title.toLowerCase().includes('listen')
+  );
   let questionNumber = 1;
 
   return (
@@ -332,6 +335,82 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
         </div>
       </div>
 
+      {/* Top Listening Audio Summary Banner (so teacher doesn't have to scroll down on long exams) */}
+      {listeningSections.length > 0 && (
+        <div className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 shadow-xs">
+          <div className="space-y-3">
+            {listeningSections.map((sec) => (
+              <div
+                key={sec.id}
+                className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white">
+                    <Headphones className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-indigo-950">
+                      File nghe MP3: {sec.title}
+                    </div>
+                    <div className="text-xs text-indigo-700">
+                      {sec.audioUrl
+                        ? 'Đã có file MP3 sẵn sàng để nghe thử, tải về hoặc phát trên đề Online.'
+                        : 'Chưa có file MP3 — bấm "Tạo file MP3 ngay" để chuyển lời thoại thành giọng đọc.'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {sec.audioUrl ? (
+                    <>
+                      <audio controls src={sec.audioUrl} className="h-9 max-w-[260px]" />
+                      <a
+                        href={sec.audioUrl}
+                        download={`${draft.title.replace(/[^a-zA-Z0-9_-]+/g, '_')}_listening.mp3`}
+                        className="inline-flex items-center gap-1 rounded-xl border border-indigo-300 bg-white px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
+                      >
+                        <Download className="h-3.5 w-3.5" /> Tải .MP3
+                      </a>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={generatingAudioSecId === sec.id}
+                      onClick={() => handleRegenerateAudio(sec)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-60"
+                    >
+                      {generatingAudioSecId === sec.id ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang tạo MP3...
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="h-3.5 w-3.5" /> Tạo file MP3 ngay
+                        </>
+                      )}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('questions');
+                      setTimeout(() => {
+                        document
+                          .getElementById(`sec_${sec.id}`)
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }, 50);
+                    }}
+                    className="rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                  >
+                    Tới Phần Nghe ↓
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
         <div className="flex gap-2">
@@ -397,6 +476,7 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
           {draft.sections.map((section) => (
             <div
               key={section.id}
+              id={`sec_${section.id}`}
               className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"
             >
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">

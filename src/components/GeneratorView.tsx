@@ -14,7 +14,7 @@ import {
   Trash2,
   Wand2,
 } from 'lucide-react';
-import { generateHomeworkWithGemini } from '../services/gemini';
+import { attachAudioToListeningSections, generateHomeworkWithGemini } from '../services/gemini';
 import {
   AppSettings,
   GeneratorConfig,
@@ -288,12 +288,13 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
     setTimeout(() => setCopiedPrompt(false), 2000);
   };
 
-  const handleImportPasted = () => {
+  const handleImportPasted = async () => {
     setError('');
     if (!pastedResult.trim()) {
       setError('Hãy dán phần bài tập mà ChatGPT hoặc Gemini web trả về vào ô bên trên.');
       return;
     }
+    setLoading(true);
     try {
       const homework = parseAiHomeworkResponse(pastedResult, {
         level: config.level,
@@ -301,9 +302,15 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         teacherName: settings.teacherName,
         centerName: settings.centerName,
       });
+      const audioFiles = materials.filter(
+        (m): m is Extract<AttachedMaterial, { kind: 'audio' }> => m.kind === 'audio'
+      );
+      await attachAudioToListeningSections(homework, config.level, audioFiles);
       onCreated(homework);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không đọc được kết quả AI.');
+    } finally {
+      setLoading(false);
     }
   };
 
