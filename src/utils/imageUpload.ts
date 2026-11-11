@@ -78,3 +78,4 @@ export function extractClipboardImage(e: React.ClipboardEvent): File | null {
   }
   return null;
 }
+
