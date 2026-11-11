@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   BookOpen,
   Check,
+  ChevronDown,
   ClipboardCopy,
   FilePlus2,
   FileText,
@@ -97,6 +98,21 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [listeningMenuOpen, setListeningMenuOpen] = useState(false);
+
+  const listeningStyleOptions: Array<{ value: ListeningStyle; short: string; label: string }> = [
+    { value: 'multiple_choice', short: 'Khoanh A/B/C/D', label: 'Khoanh trắc nghiệm A/B/C/D' },
+    {
+      value: 'note_fill',
+      short: 'Điền từ / Điền phiếu',
+      label: 'Điền từ / Điền phiếu (không cho đáp án)',
+    },
+    { value: 'matching_box', short: 'Nối bảng A–G', label: 'Nối bảng lựa chọn A–G' },
+    { value: 'true_false', short: 'Đúng / Sai', label: 'Đúng / Sai (True / False)' },
+  ];
+  const currentListeningStyle =
+    listeningStyleOptions.find((o) => o.value === (config.listeningStyle || 'multiple_choice')) ||
+    listeningStyleOptions[0];
 
   const totalQuestions = useMemo(() => {
     const c = config.counts;
@@ -671,66 +687,91 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {questionTypesMeta.map((item) => {
             const count = config.counts[item.key];
-            const showListeningStyle =
-              item.key === 'listening_questions' && (count > 0 || hasAttachedAudio);
+            const isListeningCard = item.key === 'listening_questions';
 
             return (
               <div
                 key={item.key}
-                className={`flex flex-col justify-between gap-2.5 rounded-xl border p-3 ${
+                className={`relative flex items-center justify-between rounded-xl border p-3 ${
                   count > 0 ? 'border-indigo-200 bg-indigo-50/40' : 'border-slate-200 bg-slate-50/40'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="pr-2">
-                    <div className="text-sm font-semibold text-slate-800">{item.label}</div>
-                    <div className="text-[11px] text-slate-500">{item.desc}</div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => updateCount(item.key, -1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-bold text-slate-700 hover:bg-slate-100"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min={0}
-                      max={50}
-                      value={count}
-                      onChange={(e) => setExactCount(item.key, Number(e.target.value))}
-                      className="w-11 rounded-lg border border-slate-200 bg-white py-1 text-center text-sm font-bold text-slate-900 focus:border-indigo-500 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => updateCount(item.key, 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-bold text-slate-700 hover:bg-slate-100"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
+                <div className="pr-2 min-w-0">
+                  <div className="text-sm font-semibold text-slate-800">{item.label}</div>
+                  {isListeningCard ? (
+                    <div className="relative mt-0.5 inline-block">
+                      <button
+                        type="button"
+                        onClick={() => setListeningMenuOpen((v) => !v)}
+                        className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50"
+                      >
+                        <span>Kiểu: {currentListeningStyle.short}</span>
+                        <ChevronDown className="h-3 w-3" />
+                      </button>
 
-                {showListeningStyle && (
-                  <div className="border-t border-indigo-100 pt-2">
-                    <select
-                      value={config.listeningStyle || 'multiple_choice'}
-                      onChange={(e) =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          listeningStyle: e.target.value as ListeningStyle,
-                        }))
-                      }
-                      className="w-full rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-indigo-900 focus:border-indigo-500 focus:outline-none"
-                    >
-                      <option value="multiple_choice">Kiểu: Khoanh trắc nghiệm A/B/C/D</option>
-                      <option value="note_fill">Kiểu: Điền từ / Điền phiếu (không cho đáp án)</option>
-                      <option value="matching_box">Kiểu: Nối bảng lựa chọn A–G</option>
-                      <option value="true_false">Kiểu: Đúng / Sai (True / False)</option>
-                    </select>
-                  </div>
-                )}
+                      {listeningMenuOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setListeningMenuOpen(false)}
+                          />
+                          <div className="absolute top-full left-0 z-20 mt-1.5 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+                            {listeningStyleOptions.map((opt) => {
+                              const active = opt.value === currentListeningStyle.value;
+                              return (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setConfig((prev) => ({
+                                      ...prev,
+                                      listeningStyle: opt.value,
+                                    }));
+                                    setListeningMenuOpen(false);
+                                  }}
+                                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs transition ${
+                                    active
+                                      ? 'bg-indigo-50 font-bold text-indigo-700'
+                                      : 'text-slate-700 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <span>{opt.label}</span>
+                                  {active && <Check className="h-3.5 w-3.5 text-indigo-600" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-500">{item.desc}</div>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => updateCount(item.key, -1)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-bold text-slate-700 hover:bg-slate-100"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={count}
+                    onChange={(e) => setExactCount(item.key, Number(e.target.value))}
+                    className="w-11 rounded-lg border border-slate-200 bg-white py-1 text-center text-sm font-bold text-slate-900 focus:border-indigo-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateCount(item.key, 1)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-bold text-slate-700 hover:bg-slate-100"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             );
           })}
