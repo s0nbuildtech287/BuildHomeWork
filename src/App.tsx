@@ -7,13 +7,17 @@ import { OnlineQuizView } from './components/OnlineQuizView';
 import { PrintWorksheet } from './components/PrintWorksheet';
 import { SettingsModal } from './components/SettingsModal';
 import {
+  DEFAULT_GENERATOR_CONFIG,
   fetchHomeworks,
+  loadGeneratorDraft,
   loadSettings,
   removeHomework,
+  saveGeneratorDraft,
   saveSettings,
   upsertHomework,
 } from './services/storage';
-import { AppSettings, Homework } from './types';
+import { AppSettings, GeneratorConfig, Homework } from './types';
+import { AttachedMaterial } from './utils/fileExtractor';
 import { createId } from './utils/promptBuilder';
 
 type TeacherPage = 'generate' | 'library' | 'editor' | 'print' | 'previewQuiz';
@@ -52,6 +56,26 @@ export function App() {
   const [hasServerGeminiKey, setHasServerGeminiKey] = useState(false);
 
   const [activeHomework, setActiveHomework] = useState<Homework | null>(null);
+
+  const [initialDraft] = useState(() => loadGeneratorDraft());
+  const [generatorConfig, setGeneratorConfig] = useState<GeneratorConfig>(initialDraft.config);
+  const [generatorAiMode, setGeneratorAiMode] = useState<'gemini' | 'manual_prompt'>(
+    initialDraft.aiMode
+  );
+  const [generatorMaterials, setGeneratorMaterials] = useState<AttachedMaterial[]>(
+    initialDraft.textMaterials
+  );
+  const [generatorPastedResult, setGeneratorPastedResult] = useState('');
+
+  useEffect(() => {
+    saveGeneratorDraft(generatorConfig, generatorAiMode, generatorMaterials);
+  }, [generatorConfig, generatorAiMode, generatorMaterials]);
+
+  const handleResetGenerator = () => {
+    setGeneratorConfig(DEFAULT_GENERATOR_CONFIG);
+    setGeneratorMaterials([]);
+    setGeneratorPastedResult('');
+  };
 
   useEffect(() => {
     const onHashChange = () => setQuizRoute(parseQuizHashRoute());
@@ -209,6 +233,15 @@ export function App() {
           <GeneratorView
             settings={settings}
             hasServerGeminiKey={hasServerGeminiKey}
+            config={generatorConfig}
+            onChangeConfig={setGeneratorConfig}
+            aiMode={generatorAiMode}
+            onChangeAiMode={setGeneratorAiMode}
+            materials={generatorMaterials}
+            onChangeMaterials={setGeneratorMaterials}
+            pastedResult={generatorPastedResult}
+            onChangePastedResult={setGeneratorPastedResult}
+            onResetForm={handleResetGenerator}
             onCreated={handleCreatedHomework}
             onOpenSettings={() => setShowSettings(true)}
           />

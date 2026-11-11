@@ -8,6 +8,7 @@ import {
   FileUp,
   Loader2,
   MessageSquare,
+  RotateCcw,
   Sparkles,
   Trash2,
   Wand2,
@@ -26,6 +27,15 @@ import { buildHomeworkPrompt, parseAiHomeworkResponse } from '../utils/promptBui
 interface GeneratorViewProps {
   settings: AppSettings;
   hasServerGeminiKey: boolean;
+  config: GeneratorConfig;
+  onChangeConfig: React.Dispatch<React.SetStateAction<GeneratorConfig>>;
+  aiMode: 'gemini' | 'manual_prompt';
+  onChangeAiMode: React.Dispatch<React.SetStateAction<'gemini' | 'manual_prompt'>>;
+  materials: AttachedMaterial[];
+  onChangeMaterials: React.Dispatch<React.SetStateAction<AttachedMaterial[]>>;
+  pastedResult: string;
+  onChangePastedResult: React.Dispatch<React.SetStateAction<string>>;
+  onResetForm: () => void;
   onCreated: (homework: Homework) => void;
   onOpenSettings: () => void;
 }
@@ -60,28 +70,22 @@ const DEFAULT_COUNTS_BY_LEVEL: Record<TargetLevel, SectionCountConfig> = {
 export const GeneratorView: React.FC<GeneratorViewProps> = ({
   settings,
   hasServerGeminiKey,
+  config,
+  onChangeConfig: setConfig,
+  aiMode,
+  onChangeAiMode: setAiMode,
+  materials,
+  onChangeMaterials: setMaterials,
+  pastedResult,
+  onChangePastedResult: setPastedResult,
+  onResetForm,
   onCreated,
   onOpenSettings,
 }) => {
-  const [config, setConfig] = useState<GeneratorConfig>({
-    level: 'secondary',
-    gradeOrClass: 'Lớp 7',
-    topic: '',
-    grammarFocus: '',
-    vocabularyFocus: '',
-    studentMistakes: '',
-    extraInstructions: '',
-    difficulty: 'medium',
-    counts: DEFAULT_COUNTS_BY_LEVEL.secondary,
-  });
-
-  const [aiMode, setAiMode] = useState<'gemini' | 'manual_prompt'>('gemini');
-  const [materials, setMaterials] = useState<AttachedMaterial[]>([]);
   const [readingFiles, setReadingFiles] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copiedPrompt, setCopiedPrompt] = useState(false);
-  const [pastedResult, setPastedResult] = useState('');
 
   const totalQuestions = useMemo(() => {
     const c = config.counts;
@@ -266,7 +270,19 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
     <div className="mx-auto max-w-5xl space-y-6">
       {/* Target Level */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-        <h2 className="mb-3 text-base font-bold text-slate-900">1. Chọn đối tượng học sinh</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-slate-900">1. Chọn đối tượng học sinh</h2>
+          <button
+            type="button"
+            onClick={() => {
+              setError('');
+              onResetForm();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> Xóa để nhập bài mới
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[

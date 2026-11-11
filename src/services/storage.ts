@@ -1,9 +1,78 @@
-import { AppSettings, Homework, StudentSubmission } from '../types';
+import { AppSettings, GeneratorConfig, Homework, StudentSubmission } from '../types';
+import { AttachedMaterial } from '../utils/fileExtractor';
 import { SAMPLE_HOMEWORKS } from '../utils/sampleData';
 
 const HOMEWORKS_KEY = 'bhw_homeworks_v1';
 const SETTINGS_KEY = 'bhw_settings_v1';
 const SUBMISSIONS_KEY = 'bhw_submissions_v1';
+const GENERATOR_DRAFT_KEY = 'bhw_generator_draft_v1';
+
+export const DEFAULT_GENERATOR_CONFIG: GeneratorConfig = {
+  level: 'secondary',
+  gradeOrClass: 'Lớp 7',
+  topic: '',
+  grammarFocus: '',
+  vocabularyFocus: '',
+  studentMistakes: '',
+  extraInstructions: '',
+  difficulty: 'medium',
+  counts: {
+    multiple_choice: 6,
+    fill_blank: 4,
+    word_form: 3,
+    sentence_order: 0,
+    rewrite: 3,
+    reading_questions: 4,
+  },
+};
+
+export interface SavedGeneratorDraft {
+  config: GeneratorConfig;
+  aiMode: 'gemini' | 'manual_prompt';
+  textMaterials: Array<Extract<AttachedMaterial, { kind: 'text' }>>;
+}
+
+export function loadGeneratorDraft(): SavedGeneratorDraft {
+  try {
+    const raw = localStorage.getItem(GENERATOR_DRAFT_KEY);
+    if (!raw) {
+      return { config: DEFAULT_GENERATOR_CONFIG, aiMode: 'gemini', textMaterials: [] };
+    }
+    const parsed = JSON.parse(raw);
+    return {
+      config: {
+        ...DEFAULT_GENERATOR_CONFIG,
+        ...(parsed.config || {}),
+        counts: {
+          ...DEFAULT_GENERATOR_CONFIG.counts,
+          ...(parsed.config?.counts || {}),
+        },
+      },
+      aiMode: parsed.aiMode === 'manual_prompt' ? 'manual_prompt' : 'gemini',
+      textMaterials: Array.isArray(parsed.textMaterials) ? parsed.textMaterials : [],
+    };
+  } catch {
+    return { config: DEFAULT_GENERATOR_CONFIG, aiMode: 'gemini', textMaterials: [] };
+  }
+}
+
+export function saveGeneratorDraft(
+  config: GeneratorConfig,
+  aiMode: 'gemini' | 'manual_prompt',
+  materials: AttachedMaterial[]
+): void {
+  try {
+    const textMaterials = materials.filter(
+      (m): m is Extract<AttachedMaterial, { kind: 'text' }> => m.kind === 'text'
+    );
+    localStorage.setItem(
+      GENERATOR_DRAFT_KEY,
+      JSON.stringify({ config, aiMode, textMaterials })
+    );
+  } catch {
+    // ignore storage quota errors
+  }
+}
 
 export const DEFAULT_SETTINGS: AppSettings = {
   geminiApiKey: '',
