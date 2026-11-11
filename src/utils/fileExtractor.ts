@@ -130,3 +130,4 @@ export async function extractAttachedMaterial(file: File): Promise<AttachedMater
     `Chưa hỗ trợ định dạng tệp "${file.name}". Hãy dùng ảnh, Word (.docx), PDF (.pdf) hoặc file chữ (.txt).`
   );
 }
+
