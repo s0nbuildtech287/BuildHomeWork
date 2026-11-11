@@ -68,6 +68,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
     grammarFocus: '',
     vocabularyFocus: '',
     studentMistakes: '',
+    extraInstructions: '',
     difficulty: 'medium',
     counts: DEFAULT_COUNTS_BY_LEVEL.secondary,
   });
@@ -179,8 +180,8 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
       setError('Bạn hãy nhập tên bài học / ngữ pháp hôm nay hoặc tải lên ảnh trang sách nhé.');
       return;
     }
-    if (totalQuestions === 0) {
-      setError('Hãy chọn ít nhất 1 dạng câu hỏi để AI tạo bài.');
+    if (totalQuestions === 0 && !config.extraInstructions?.trim()) {
+      setError('Hãy chọn ít nhất 1 dạng câu hỏi hoặc nhập yêu cầu thêm bên dưới để tạo bài.');
       return;
     }
     if (!settings.geminiApiKey.trim() && !hasServerGeminiKey) {
@@ -508,6 +509,19 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-4">
+          <label className="mb-1 block text-xs font-semibold text-slate-700">
+            Yêu cầu thêm hoặc dạng bài khác (tùy chọn — viết tự nhiên bằng lời)
+          </label>
+          <textarea
+            rows={2}
+            value={config.extraInstructions || ''}
+            onChange={(e) => setConfig({ ...config, extraInstructions: e.target.value })}
+            placeholder="VD: Thêm 5 câu tìm từ khác loại (Odd one out), 4 câu tìm lỗi sai, hoặc 5 câu dịch Việt - Anh ngắn; ưu tiên câu gần gũi với học sinh..."
+            className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
+          />
         </div>
       </div>
 

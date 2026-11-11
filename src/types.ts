@@ -59,6 +59,7 @@ export interface GeneratorConfig {
   grammarFocus: string;
   vocabularyFocus: string;
   studentMistakes: string;
+  extraInstructions?: string;
   difficulty: 'easy' | 'medium' | 'hard';
   counts: SectionCountConfig;
 }

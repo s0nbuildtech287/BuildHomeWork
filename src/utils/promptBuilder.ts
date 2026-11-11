@@ -68,6 +68,10 @@ export function buildHomeworkPrompt(
     ? '\nLƯU Ý ẢNH ĐÍNH KÈM: Giáo viên có gửi kèm ảnh trang sách/ghi chú buổi học. Hãy đọc kỹ nội dung từ vựng, cấu trúc câu và ngữ cảnh trong ảnh để ra bài tập bám sát chính xác bài học đó.'
     : '';
 
+  const extraNote = config.extraInstructions?.trim()
+    ? `\n- Yêu cầu bổ sung / Dạng bài khác từ giáo viên: ${config.extraInstructions.trim()}\n  (Nếu giáo viên yêu cầu thêm dạng bài khác như tìm từ khác loại / Odd one out, phát âm / trọng âm, tìm lỗi sai, dịch câu, hỏi đáp hội thoại, điền từ vào đoạn văn..., hãy tạo thêm section tương ứng và chọn "type" phù hợp nhất trong ["multiple_choice", "fill_blank", "word_form", "sentence_order", "rewrite"] để hệ thống hiển thị và tự chấm được; với bài phát âm/trọng âm nhớ in đậm hoặc đặt dấu * hoặc gạch chân phần âm cần xét rõ ràng bằng chữ hoa/ngoặc vuông, ví dụ: "ch[oo]se" hoặc gạch dưới ký hiệu dễ nhìn.)`
+    : '';
+
   return `Bạn là chuyên gia sư phạm tiếng Anh tại Việt Nam. Hãy soạn một bộ BÀI TẬP VỀ NHÀ chất lượng cao, chính xác 100% về ngữ pháp và ngữ nghĩa.
 
 THÔNG TIN BUỔI HỌC:
@@ -77,10 +81,10 @@ THÔNG TIN BUỔI HỌC:
 - Chủ đề / Bài học hôm nay: ${config.topic || 'Theo nội dung đính kèm'}
 - Ngữ pháp trọng tâm: ${config.grammarFocus || 'Tổng hợp phù hợp chủ đề'}
 - Từ vựng cần ôn: ${config.vocabularyFocus || 'Từ vựng liên quan chủ đề'}
-- Lỗi học sinh hay nhầm cần nhấn mạnh: ${config.studentMistakes || 'Không có ghi chú thêm'}${imageNote}
+- Lỗi học sinh hay nhầm cần nhấn mạnh: ${config.studentMistakes || 'Không có ghi chú thêm'}${extraNote}${imageNote}
 
 YÊU CẦU CẤU TRÚC CÁC PHẦN:
-${requestedParts.join('\n')}
+${requestedParts.length > 0 ? requestedParts.join('\n') : '- Tạo các phần bài tập theo đúng yêu cầu bổ sung của giáo viên ở trên.'}
 
 QUY ĐỊNH ĐỊNH DẠNG ĐẦU RA (BẮT BUỘC):
 Chỉ trả về DUY NHẤT một khối JSON hợp lệ (không giải thích thừa ngoài JSON), tuân thủ schema sau:
