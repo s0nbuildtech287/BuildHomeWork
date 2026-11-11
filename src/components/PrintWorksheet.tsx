@@ -1,0 +1,187 @@
+import React, { useState } from 'react';
+import { ArrowLeft, Printer } from 'lucide-react';
+import { Homework } from '../types';
+import { resolveCorrectOptionIndex, stripOptionPrefix } from '../utils/grading';
+
+interface PrintWorksheetProps {
+  homework: Homework;
+  onBack: () => void;
+}
+
+type PrintMode = 'student' | 'student_with_key' | 'teacher';
+
+export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack }) => {
+  const [mode, setMode] = useState<PrintMode>('student_with_key');
+
+  let questionCounter = 1;
+  const answerSummary: Array<{ num: number; answer: string; explanation: string }> = [];
+
+  return (
+    <div className="min-h-screen bg-slate-100 pb-12">
+      {/* Toolbar hidden when printing */}
+      <div className="no-print sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 shadow-xs">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            <ArrowLeft className="h-4 w-4" /> Quay lại chỉnh sửa
+          </button>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value as PrintMode)}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+            >
+              <option value="student">Chỉ in Đề bài (cho học sinh)</option>
+              <option value="student_with_key">Đề bài + Trang Đáp án cuối</option>
+              <option value="teacher">Đề bài + Đáp án & Giải thích</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-700"
+            >
+              <Printer className="h-4 w-4" /> In / Lưu thành PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* A4 Worksheet Canvas */}
+      <div className="print-only-container font-worksheet mx-auto mt-6 max-w-[210mm] rounded-xl border border-slate-200 bg-white p-10 shadow-md">
+        {(homework.centerName || homework.teacherName) && (
+          <div className="mb-1 text-center text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            {[homework.centerName, homework.teacherName ? `GV: ${homework.teacherName}` : '']
+              .filter(Boolean)
+              .join('  •  ')}
+          </div>
+        )}
+
+        <h1 className="text-center text-xl font-bold text-slate-900 uppercase">
+          {homework.title}
+        </h1>
+        {homework.subtitle && (
+          <p className="mt-1 text-center text-sm text-slate-600 italic">{homework.subtitle}</p>
+        )}
+
+        {/* Student Name & Class Grid */}
+        <div className="mt-4 grid grid-cols-12 border border-slate-400 text-sm">
+          <div className="col-span-6 border-r border-slate-400 px-3 py-2">
+            <strong>Full name:</strong> .....................................................
+          </div>
+          <div className="col-span-3 border-r border-slate-400 px-3 py-2">
+            <strong>Class:</strong> {homework.gradeOrClass || '..............'}
+          </div>
+          <div className="col-span-3 px-3 py-2">
+            <strong>Score:</strong> ....... / .......
+          </div>
+        </div>
+
+        {/* Sections */}
+        <div className="mt-6 space-y-5">
+          {homework.sections.map((section) => (
+            <div key={section.id}>
+              <h2 className="text-base font-bold text-slate-900">{section.title}</h2>
+              {section.instruction && (
+                <p className="mb-2 text-sm text-slate-600 italic">{section.instruction}</p>
+              )}
+
+              {section.wordBank && section.wordBank.length > 0 && (
+                <div className="mb-3 rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm">
+                  <strong>Word bank:</strong> {section.wordBank.join('   •   ')}
+                </div>
+              )}
+
+              {section.readingPassage && (
+                <div className="mb-3 rounded border-l-4 border-slate-400 bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-800 whitespace-pre-line">
+                  {section.readingPassage}
+                </div>
+              )}
+
+              <div className="space-y-2.5">
+                {section.questions.map((q) => {
+                  const qNum = questionCounter++;
+                  let displayCorrect = q.correctAnswer;
+                  if (q.type === 'multiple_choice' && q.options?.length) {
+                    const idx = resolveCorrectOptionIndex(q);
+                    if (idx >= 0) {
+                      displayCorrect = `${String.fromCharCode(65 + idx)}. ${stripOptionPrefix(
+                        q.options[idx]
+                      )}`;
+                    }
+                  }
+                  answerSummary.push({
+                    num: qNum,
+                    answer: displayCorrect,
+                    explanation: q.explanation,
+                  });
+
+                  return (
+                    <div key={q.id} className="avoid-break text-[14px] leading-relaxed">
+                      {q.type === 'sentence_order' && q.words?.length ? (
+                        <div>
+                          <p>
+                            <strong>{qNum}.</strong> {q.words.join(' / ')}
+                          </p>
+                          <p className="mt-1 pl-5 text-slate-500">
+                            → ..........................................................................................................
+                          </p>
+                        </div>
+                      ) : (
+                        <p>
+                          <strong>{qNum}.</strong> {q.prompt}
+                        </p>
+                      )}
+
+                      {q.type === 'multiple_choice' && q.options?.length && (
+                        <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1 pl-5 sm:grid-cols-4">
+                          {q.options.map((opt, idx) => (
+                            <span key={idx}>
+                              <strong>{String.fromCharCode(65 + idx)}.</strong>{' '}
+                              {stripOptionPrefix(opt)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {q.type === 'rewrite' && !q.prompt.includes('____') && (
+                        <p className="mt-1 pl-5 text-slate-500">
+                          → ..........................................................................................................
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Answer Key Page */}
+        {mode !== 'student' && answerSummary.length > 0 && (
+          <div className="page-break-before mt-8 border-t-2 border-dashed border-slate-300 pt-6">
+            <h2 className="mb-3 text-center text-lg font-bold text-slate-900 uppercase">
+              {mode === 'teacher' ? 'Answer Key & Explanations' : 'Answer Key'}
+            </h2>
+            <div className="space-y-1.5 text-sm">
+              {answerSummary.map((item) => (
+                <div key={item.num} className="avoid-break">
+                  <strong>Câu {item.num}:</strong>{' '}
+                  <span className="font-semibold text-emerald-800">{item.answer}</span>
+                  {mode === 'teacher' && item.explanation && (
+                    <span className="text-slate-600"> — {item.explanation}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+

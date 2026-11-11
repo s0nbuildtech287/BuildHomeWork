@@ -1,0 +1,38 @@
+{
+  "name": "build-homework-english",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "English Homework Generator & Online Quiz Tool for Teachers",
+  "scripts": {
+    "dev": "concurrently \"node server.js\" \"vite\"",
+    "build": "vite build",
+    "start": "node server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "docx": "^9.5.0",
+    "express": "^5.1.0",
+    "file-saver": "^2.0.5",
+    "lucide-react": "^0.511.0",
+    "lz-string": "^1.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.4",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/file-saver": "^2.0.7",
+    "@types/lz-string": "^1.5.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "concurrently": "^9.1.2",
+    "tailwindcss": "^4.1.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
+

@@ -1,0 +1,732 @@
+import React, { useEffect, useState } from 'react';
+import {
+  ArrowLeft,
+  Check,
+  Copy,
+  Download,
+  ExternalLink,
+  Eye,
+  FileText,
+  Globe,
+  Plus,
+  Printer,
+  Save,
+  Shuffle,
+  Trash2,
+  Users,
+} from 'lucide-react';
+import { fetchSubmissions } from '../services/storage';
+import { Homework, Question, StudentSubmission } from '../types';
+import { DocxExportMode, exportHomeworkToDocx } from '../utils/docxExport';
+import { countHomeworkQuestions, resolveCorrectOptionIndex, stripOptionPrefix } from '../utils/grading';
+import { createId } from '../utils/promptBuilder';
+import { buildServerQuizUrl, buildStandaloneQuizUrl } from '../utils/shareCodec';
+
+interface HomeworkEditorProps {
+  homework: Homework;
+  serverOnline: boolean;
+  onSave: (updated: Homework) => Promise<void>;
+  onOpenPrint: () => void;
+  onPreviewQuiz: (homework: Homework) => void;
+  onBackToLibrary: () => void;
+}
+
+export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
+  homework,
+  serverOnline,
+  onSave,
+  onOpenPrint,
+  onPreviewQuiz,
+  onBackToLibrary,
+}) => {
+  const [draft, setDraft] = useState<Homework>(homework);
+  const [activeTab, setActiveTab] = useState<'questions' | 'share' | 'submissions'>('questions');
+  const [saving, setSaving] = useState(false);
+  const [savedNotice, setSavedNotice] = useState(false);
+  const [showAnswersInEditor, setShowAnswersInEditor] = useState(true);
+  const [docxMode, setDocxMode] = useState<DocxExportMode>('student_with_key');
+  const [copiedKey, setCopiedKey] = useState<'server' | 'standalone' | null>(null);
+  const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
+  const [loadingSubs, setLoadingSubs] = useState(false);
+
+  useEffect(() => {
+    setDraft(homework);
+  }, [homework]);
+
+  useEffect(() => {
+    if (activeTab === 'submissions') {
+      setLoadingSubs(true);
+      fetchSubmissions(draft.id)
+        .then(setSubmissions)
+        .finally(() => setLoadingSubs(false));
+    }
+  }, [activeTab, draft.id]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(draft);
+    setSaving(false);
+    setSavedNotice(true);
+    setTimeout(() => setSavedNotice(false), 2000);
+  };
+
+  const updateQuestion = (sectionId: string, qId: string, patch: Partial<Question>) => {
+    setDraft((prev) => ({
+      ...prev,
+      sections: prev.sections.map((sec) =>
+        sec.id !== sectionId
+          ? sec
+          : {
+              ...sec,
+              questions: sec.questions.map((q) => (q.id === qId ? { ...q, ...patch } : q)),
+            }
+      ),
+    }));
+  };
+
+  const deleteQuestion = (sectionId: string, qId: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      sections: prev.sections
+        .map((sec) =>
+          sec.id !== sectionId
+            ? sec
+            : { ...sec, questions: sec.questions.filter((q) => q.id !== qId) }
+        )
+        .filter((sec) => sec.questions.length > 0),
+    }));
+  };
+
+  const addQuestion = (sectionId: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      sections: prev.sections.map((sec) => {
+        if (sec.id !== sectionId) return sec;
+        const newQ: Question = {
+          id: createId('q'),
+          type: sec.type,
+          prompt:
+            sec.type === 'sentence_order'
+              ? 'Arrange the words:'
+              : 'New question ______ here.',
+          options: sec.type === 'multiple_choice' ? ['Option A', 'Option B', 'Option C', 'Option D'] : undefined,
+          words: sec.type === 'sentence_order' ? ['I', 'like', 'English.'] : undefined,
+          correctAnswer:
+            sec.type === 'multiple_choice'
+              ? 'Option A'
+              : sec.type === 'sentence_order'
+                ? 'I like English.'
+                : 'answer',
+          explanation: 'Giải thích ngắn gọn bằng tiếng Việt.',
+        };
+        return { ...sec, questions: [...sec.questions, newQ] };
+      }),
+    }));
+  };
+
+  const shuffleQuestions = () => {
+    setDraft((prev) => ({
+      ...prev,
+      sections: prev.sections.map((sec) => {
+        const copy = [...sec.questions];
+        for (let i = copy.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return {
+          ...sec,
+          questions: copy.map((q) => {
+            if (q.type === 'multiple_choice' && q.options && q.options.length > 1) {
+              const opts = [...q.options];
+              for (let i = opts.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [opts[i], opts[j]] = [opts[j], opts[i]];
+              }
+              return { ...q, options: opts };
+            }
+            return q;
+          }),
+        };
+      }),
+    }));
+  };
+
+  const copyLink = async (type: 'server' | 'standalone') => {
+    await onSave(draft);
+    const url =
+      type === 'server' ? buildServerQuizUrl(draft.id) : buildStandaloneQuizUrl(draft);
+    await navigator.clipboard.writeText(url);
+    setCopiedKey(type);
+    setTimeout(() => setCopiedKey(null), 2200);
+  };
+
+  const totalQ = countHomeworkQuestions(draft);
+  let questionNumber = 1;
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-5">
+      {/* Top Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onBackToLibrary}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <ArrowLeft className="h-4 w-4" /> Kho bài tập
+          </button>
+          <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">
+            {totalQ} câu hỏi
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Word Export */}
+          <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1">
+            <select
+              value={docxMode}
+              onChange={(e) => setDocxMode(e.target.value as DocxExportMode)}
+              className="bg-transparent px-2 py-1 text-xs font-medium text-slate-700 focus:outline-none"
+            >
+              <option value="student">Word: Chỉ Đề bài</option>
+              <option value="student_with_key">Word: Đề + Đáp án</option>
+              <option value="teacher">Word: Giáo viên (Có giải thích)</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => exportHomeworkToDocx(draft, docxMode)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"
+            >
+              <Download className="h-3.5 w-3.5" /> Tải .DOCX
+            </button>
+          </div>
+
+          {/* Print / PDF */}
+          <button
+            type="button"
+            onClick={async () => {
+              await onSave(draft);
+              onOpenPrint();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+          >
+            <Printer className="h-3.5 w-3.5 text-rose-600" /> Xuất PDF / In
+          </button>
+
+          {/* Save */}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700"
+          >
+            {savedNotice ? (
+              <>
+                <Check className="h-3.5 w-3.5" /> Đã lưu!
+              </>
+            ) : (
+              <>
+                <Save className="h-3.5 w-3.5" /> {saving ? 'Đang lưu...' : 'Lưu vào kho'}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Metadata Header Card */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-500">Tiêu đề bài tập</label>
+            <input
+              type="text"
+              value={draft.title}
+              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-900 focus:border-indigo-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-500">Mô tả ngắn</label>
+            <input
+              type="text"
+              value={draft.subtitle || ''}
+              onChange={(e) => setDraft({ ...draft, subtitle: e.target.value })}
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-500">Lớp / Nhóm</label>
+            <input
+              type="text"
+              value={draft.gradeOrClass || ''}
+              onChange={(e) => setDraft({ ...draft, gradeOrClass: e.target.value })}
+              className="w-full rounded-xl border border-slate-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-500">Giáo viên</label>
+            <input
+              type="text"
+              value={draft.teacherName || ''}
+              onChange={(e) => setDraft({ ...draft, teacherName: e.target.value })}
+              placeholder="VD: Cô Lan Anh"
+              className="w-full rounded-xl border border-slate-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-500">Trung tâm / Trường</label>
+            <input
+              type="text"
+              value={draft.centerName || ''}
+              onChange={(e) => setDraft({ ...draft, centerName: e.target.value })}
+              placeholder="VD: English Corner"
+              className="w-full rounded-xl border border-slate-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('questions')}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold ${
+              activeTab === 'questions'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <FileText className="h-4 w-4" /> Nội dung câu hỏi
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('share')}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold ${
+              activeTab === 'share'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Globe className="h-4 w-4" /> Link làm bài Online
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('submissions')}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold ${
+              activeTab === 'submissions'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Users className="h-4 w-4" /> Kết quả học sinh
+          </button>
+        </div>
+
+        {activeTab === 'questions' && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={shuffleQuestions}
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <Shuffle className="h-3.5 w-3.5" /> Trộn thứ tự câu
+            </button>
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={showAnswersInEditor}
+                onChange={(e) => setShowAnswersInEditor(e.target.checked)}
+              />
+              Hiện đáp án & giải thích
+            </label>
+          </div>
+        )}
+      </div>
+
+      {/* Tab Content: Questions */}
+      {activeTab === 'questions' && (
+        <div className="space-y-5">
+          {draft.sections.map((section) => (
+            <div
+              key={section.id}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"
+            >
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex-1 space-y-1">
+                  <input
+                    type="text"
+                    value={section.title}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        sections: prev.sections.map((s) =>
+                          s.id === section.id ? { ...s, title: e.target.value } : s
+                        ),
+                      }))
+                    }
+                    className="w-full text-base font-bold text-indigo-700 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={section.instruction}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        sections: prev.sections.map((s) =>
+                          s.id === section.id ? { ...s, instruction: e.target.value } : s
+                        ),
+                      }))
+                    }
+                    className="w-full text-xs text-slate-500 italic focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => addQuestion(section.id)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Thêm câu
+                </button>
+              </div>
+
+              {section.readingPassage !== undefined && section.readingPassage !== '' && (
+                <div className="mb-4">
+                  <label className="mb-1 block text-xs font-semibold text-slate-500">
+                    Đoạn văn đọc hiểu (có thể chỉnh sửa)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={section.readingPassage}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        sections: prev.sections.map((s) =>
+                          s.id === section.id ? { ...s, readingPassage: e.target.value } : s
+                        ),
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed text-slate-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {section.questions.map((q) => {
+                  const qNum = questionNumber++;
+                  const correctIdx =
+                    q.type === 'multiple_choice' ? resolveCorrectOptionIndex(q) : -1;
+
+                  return (
+                    <div
+                      key={q.id}
+                      className="rounded-xl border border-slate-200 bg-slate-50/50 p-4"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="mt-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+                          {qNum}
+                        </span>
+                        <div className="flex-1 space-y-2.5">
+                          <input
+                            type="text"
+                            value={q.prompt}
+                            onChange={(e) =>
+                              updateQuestion(section.id, q.id, { prompt: e.target.value })
+                            }
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
+                          />
+
+                          {q.type === 'sentence_order' && (
+                            <div>
+                              <label className="text-[11px] font-semibold text-slate-500">
+                                Các từ cần sắp xếp (cách nhau bằng dấu | ):
+                              </label>
+                              <input
+                                type="text"
+                                value={(q.words || []).join(' | ')}
+                                onChange={(e) =>
+                                  updateQuestion(section.id, q.id, {
+                                    words: e.target.value
+                                      .split('|')
+                                      .map((w) => w.trim())
+                                      .filter(Boolean),
+                                  })
+                                }
+                                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm"
+                              />
+                            </div>
+                          )}
+
+                          {q.type === 'multiple_choice' && q.options && (
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              {q.options.map((opt, idx) => {
+                                const isAns = idx === correctIdx;
+                                return (
+                                  <div
+                                    key={idx}
+                                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 ${
+                                      showAnswersInEditor && isAns
+                                        ? 'border-emerald-400 bg-emerald-50'
+                                        : 'border-slate-200 bg-white'
+                                    }`}
+                                  >
+                                    <button
+                                      type="button"
+                                      title="Đặt làm đáp án đúng"
+                                      onClick={() =>
+                                        updateQuestion(section.id, q.id, {
+                                          correctAnswer: stripOptionPrefix(opt),
+                                        })
+                                      }
+                                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                        isAns
+                                          ? 'bg-emerald-600 text-white'
+                                          : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                                      }`}
+                                    >
+                                      {String.fromCharCode(65 + idx)}
+                                    </button>
+                                    <input
+                                      type="text"
+                                      value={stripOptionPrefix(opt)}
+                                      onChange={(e) => {
+                                        const nextOpts = [...(q.options || [])];
+                                        nextOpts[idx] = e.target.value;
+                                        const patch: Partial<Question> = { options: nextOpts };
+                                        if (isAns) {
+                                          patch.correctAnswer = e.target.value;
+                                        }
+                                        updateQuestion(section.id, q.id, patch);
+                                      }}
+                                      className="w-full bg-transparent text-sm text-slate-800 focus:outline-none"
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {showAnswersInEditor && (
+                            <div className="grid grid-cols-1 gap-2 rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 sm:grid-cols-2">
+                              <div>
+                                <label className="block text-[11px] font-bold text-emerald-800">
+                                  Đáp án chuẩn (nhiều đáp án ngăn cách bởi | )
+                                </label>
+                                <input
+                                  type="text"
+                                  value={q.correctAnswer}
+                                  onChange={(e) =>
+                                    updateQuestion(section.id, q.id, {
+                                      correctAnswer: e.target.value,
+                                    })
+                                  }
+                                  className="mt-0.5 w-full rounded border border-emerald-200 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-900"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-600">
+                                  Giải thích cho học sinh
+                                </label>
+                                <input
+                                  type="text"
+                                  value={q.explanation}
+                                  onChange={(e) =>
+                                    updateQuestion(section.id, q.id, {
+                                      explanation: e.target.value,
+                                    })
+                                  }
+                                  className="mt-0.5 w-full rounded border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => deleteQuestion(section.id, q.id)}
+                          title="Xóa câu này"
+                          className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Tab Content: Online Quiz Links */}
+      {activeTab === 'share' && (
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                Gửi Link cho học sinh làm Online & Tự chấm điểm
+              </h3>
+              <p className="text-xs text-slate-500">
+                Học sinh bấm link trên điện thoại/máy tính, nhập tên, làm bài và xem đáp án + giải thích ngay lập tức.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                await onSave(draft);
+                onPreviewQuiz(draft);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700"
+            >
+              <Eye className="h-4 w-4" /> Xem thử giao diện Học sinh
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {/* Server ID Link */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-900">
+                  Link ngắn (Lưu điểm về máy Giáo viên)
+                </span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                    serverOnline
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}
+                >
+                  {serverOnline ? 'Server đang bật' : 'Chế độ offline'}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-600">
+                Dùng khi học sinh học chung Wi-Fi / mạng LAN hoặc khi bạn đưa app lên server/hosting. Điểm của học sinh sẽ tự động lưu vào tab <strong>Kết quả học sinh</strong>.
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  readOnly
+                  value={buildServerQuizUrl(draft.id)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                />
+                <button
+                  type="button"
+                  onClick={() => copyLink('server')}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                >
+                  {copiedKey === 'server' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedKey === 'server' ? 'Đã copy' : 'Copy'}
+                </button>
+              </div>
+            </div>
+
+            {/* Standalone Compressed Link */}
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-indigo-950">
+                  Link Độc Lập (Gửi qua Zalo cực tiện)
+                </span>
+                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+                  Không cần Database
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-600">
+                Toàn bộ câu hỏi được nén sẵn trong đường link. Nếu bạn host trang web này miễn phí (Vercel/Netlify), chỉ cần copy link này gửi vào nhóm Zalo lớp là học sinh làm được ngay!
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  readOnly
+                  value={buildStandaloneQuizUrl(draft)}
+                  className="w-full rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                />
+                <button
+                  type="button"
+                  onClick={() => copyLink('standalone')}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+                >
+                  {copiedKey === 'standalone' ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  )}
+                  {copiedKey === 'standalone' ? 'Đã copy' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Content: Student Submissions */}
+      {activeTab === 'submissions' && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Bảng điểm học sinh đã nộp</h3>
+              <p className="text-xs text-slate-500">
+                Hiển thị các bài nộp qua Link ngắn khi server đang chạy
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setLoadingSubs(true);
+                fetchSubmissions(draft.id)
+                  .then(setSubmissions)
+                  .finally(() => setLoadingSubs(false));
+              }}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Làm mới
+            </button>
+          </div>
+
+          {loadingSubs ? (
+            <p className="py-8 text-center text-sm text-slate-500">Đang tải danh sách...</p>
+          ) : submissions.length === 0 ? (
+            <div className="rounded-xl bg-slate-50 py-10 text-center text-sm text-slate-500">
+              Chưa có học sinh nào nộp bài cho đề này.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                    <th className="py-2 pr-4">Học sinh</th>
+                    <th className="py-2 pr-4">Lớp</th>
+                    <th className="py-2 pr-4">Điểm số</th>
+                    <th className="py-2">Thời gian nộp</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {submissions.map((sub) => (
+                    <tr key={sub.id}>
+                      <td className="py-2.5 pr-4 font-semibold text-slate-900">
+                        {sub.studentName}
+                      </td>
+                      <td className="py-2.5 pr-4 text-slate-600">{sub.studentClass || '—'}</td>
+                      <td className="py-2.5 pr-4">
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+                          {sub.score} / {sub.totalQuestions}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-xs text-slate-500">
+                        {new Date(sub.submittedAt).toLocaleString('vi-VN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
