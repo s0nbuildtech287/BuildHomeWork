@@ -147,9 +147,10 @@ Chỉ trả về DUY NHẤT một khối JSON hợp lệ (không giải thích t
 }
 
 LƯU Ý QUAN TRỌNG:
-1. Mỗi câu chỉ có 1 đáp án chính xác rõ ràng (hoặc ghi các biến thể chấp nhận được cách nhau bởi " | " cho câu điền từ/viết lại câu).
-2. Mọi câu đều phải có "explanation" bằng tiếng Việt súc tích, dễ hiểu.
-3. Đảm bảo JSON hợp lệ hoàn toàn (escape dấu ngoặc kép nếu có trong chuỗi).`;
+1. Tạo ĐÚNG VÀ ĐỦ số lượng câu hỏi đã yêu cầu ở từng phần (không tự ý cắt bớt).
+2. Mỗi câu chỉ có 1 đáp án chính xác rõ ràng (hoặc ghi các biến thể chấp nhận được cách nhau bởi " | " cho câu điền từ/viết lại câu).
+3. Mọi câu đều phải có "explanation" bằng tiếng Việt súc tích, ngắn gọn (1 câu rõ ý để đảm bảo đủ dung lượng khi tạo đề dài 30-50 câu).
+4. Đảm bảo JSON hợp lệ hoàn toàn (escape dấu ngoặc kép nếu có trong chuỗi).`;
 }
 
 function normalizeQuestionType(raw: unknown, fallback: QuestionType): QuestionType {

@@ -147,7 +147,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
     }));
   };
 
-  const applyPresetCounts = (preset: 'light' | 'standard' | 'full') => {
+  const applyPresetCounts = (preset: 'light' | 'standard' | 'medium30' | 'exam50') => {
     if (preset === 'light') {
       setConfig((p) => ({
         ...p,
@@ -168,22 +168,48 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         ...p,
         counts: { ...DEFAULT_COUNTS_BY_LEVEL[p.level] },
       }));
+    } else if (preset === 'medium30') {
+      setConfig((p) => ({
+        ...p,
+        counts: {
+          multiple_choice: 10,
+          fill_blank: 5,
+          word_form: 4,
+          sentence_order: 0,
+          rewrite: 3,
+          reading_questions: 5,
+          find_mistake: 3,
+          listening_questions: 0,
+          writing: 0,
+        },
+      }));
     } else {
       setConfig((p) => ({
         ...p,
         counts: {
-          multiple_choice: 5,
-          fill_blank: 4,
-          word_form: 3,
-          sentence_order: 2,
-          rewrite: 2,
-          reading_questions: 4,
-          find_mistake: 3,
-          listening_questions: 4,
-          writing: 1,
+          multiple_choice: 20,
+          fill_blank: 6,
+          word_form: 5,
+          sentence_order: 0,
+          rewrite: 5,
+          reading_questions: 8,
+          find_mistake: 6,
+          listening_questions: 0,
+          writing: 0,
         },
       }));
     }
+  };
+
+  const setExactCount = (key: keyof SectionCountConfig, value: number) => {
+    const safeVal = Number.isNaN(value) ? 0 : Math.max(0, Math.min(50, Math.floor(value)));
+    setConfig((prev) => ({
+      ...prev,
+      counts: {
+        ...prev.counts,
+        [key]: safeVal,
+      },
+    }));
   };
 
   const updateCount = (key: keyof SectionCountConfig, delta: number) => {
@@ -191,7 +217,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
       ...prev,
       counts: {
         ...prev.counts,
-        [key]: Math.max(0, Math.min(15, prev.counts[key] + delta)),
+        [key]: Math.max(0, Math.min(50, prev.counts[key] + delta)),
       },
     }));
   };
@@ -619,10 +645,17 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => applyPresetCounts('full')}
+              onClick={() => applyPresetCounts('medium30')}
               className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
             >
-              Tổng hợp + Đọc hiểu (22 câu)
+              Tổng hợp (30 câu)
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPresetCounts('exam50')}
+              className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+            >
+              Đề thi chuẩn (50 câu)
             </button>
           </div>
         </div>
@@ -649,7 +682,14 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
                   >
                     -
                   </button>
-                  <span className="w-6 text-center text-sm font-bold text-slate-900">{count}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    value={count}
+                    onChange={(e) => setExactCount(item.key, Number(e.target.value))}
+                    className="w-11 rounded-lg border border-slate-200 bg-white py-1 text-center text-sm font-bold text-slate-900 focus:border-indigo-500 focus:outline-none"
+                  />
                   <button
                     type="button"
                     onClick={() => updateCount(item.key, 1)}

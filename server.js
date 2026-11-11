@@ -266,6 +266,7 @@ app.post('/api/generate', async (req, res) => {
           generationConfig: {
             temperature: 0.65,
             responseMimeType: 'application/json',
+            maxOutputTokens: 32768,
           },
         }),
       });
