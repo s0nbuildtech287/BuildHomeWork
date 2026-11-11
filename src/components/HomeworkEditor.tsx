@@ -994,50 +994,14 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Server ID Link */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-900">
-                  Link ngắn (Lưu điểm về máy Giáo viên)
-                </span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                    serverOnline
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}
-                >
-                  {serverOnline ? 'Đang kết nối' : 'Chế độ ngoại tuyến'}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-slate-600">
-                Dùng khi học sinh học chung Wi-Fi hoặc khi mở ứng dụng trên mạng. Điểm của học sinh sẽ tự động lưu vào tab <strong>Kết quả học sinh</strong>.
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <input
-                  readOnly
-                  value={buildServerQuizUrl(draft.id)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700"
-                />
-                <button
-                  type="button"
-                  onClick={() => copyLink('server')}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                >
-                  {copiedKey === 'server' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copiedKey === 'server' ? 'Đã copy' : 'Copy'}
-                </button>
-              </div>
-            </div>
-
-            {/* Standalone Compressed Link */}
+            {/* Standalone Compressed Link (works everywhere including Vercel & Zalo) */}
             <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold text-indigo-950">
                   Link Độc Lập (Gửi qua Zalo cực tiện)
                 </span>
                 <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
-                  Mở là làm ngay
+                  Khuyên dùng • Mở là làm ngay
                 </span>
               </div>
               <p className="mt-1 text-xs text-slate-600">
@@ -1060,6 +1024,44 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                     <ExternalLink className="h-3.5 w-3.5" />
                   )}
                   {copiedKey === 'standalone' ? 'Đã copy' : 'Copy'}
+                </button>
+              </div>
+            </div>
+
+            {/* Server ID Link */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-900">
+                  Link ngắn (Lưu điểm về máy Giáo viên)
+                </span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                    serverOnline
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}
+                >
+                  {serverOnline ? 'Đang kết nối' : 'Cần máy chủ riêng'}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-600">
+                {serverOnline
+                  ? 'Dùng khi học sinh học chung Wi-Fi hoặc chạy trên máy chủ có lưu trữ. Điểm sẽ tự lưu vào tab Kết quả học sinh.'
+                  : 'Khi dùng bản web trên Vercel, dữ liệu chỉ lưu trên trình duyệt của bạn — hãy copy Link Độc Lập bên cạnh để gửi học sinh.'}
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  readOnly
+                  value={buildServerQuizUrl(draft.id)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                />
+                <button
+                  type="button"
+                  onClick={() => copyLink('server')}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                >
+                  {copiedKey === 'server' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedKey === 'server' ? 'Đã copy' : 'Copy'}
                 </button>
               </div>
             </div>

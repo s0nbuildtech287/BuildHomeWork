@@ -1,6 +1,5 @@
 import { AppSettings, GeneratorConfig, Homework, StudentSubmission } from '../types';
 import { AttachedMaterial } from '../utils/fileExtractor';
-import { SAMPLE_HOMEWORKS } from '../utils/sampleData';
 
 const HOMEWORKS_KEY = 'bhw_homeworks_v1';
 const SETTINGS_KEY = 'bhw_settings_v1';
@@ -103,17 +102,21 @@ export function saveSettings(settings: AppSettings): void {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
+const MOCK_SAMPLE_IDS = new Set(['sample_elementary_1', 'sample_secondary_1']);
+
 function loadLocalHomeworks(): Homework[] {
   try {
     const raw = localStorage.getItem(HOMEWORKS_KEY);
-    if (!raw) {
-      localStorage.setItem(HOMEWORKS_KEY, JSON.stringify(SAMPLE_HOMEWORKS));
-      return SAMPLE_HOMEWORKS;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : SAMPLE_HOMEWORKS;
+    if (!Array.isArray(parsed)) return [];
+    const cleaned = parsed.filter((item) => item && !MOCK_SAMPLE_IDS.has(item.id));
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem(HOMEWORKS_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch {
-    return SAMPLE_HOMEWORKS;
+    return [];
   }
 }
 
@@ -130,24 +133,9 @@ export async function fetchHomeworks(): Promise<{
     const res = await fetch('/api/homeworks');
     if (!res.ok) throw new Error('Server error');
     const data = await res.json();
-    const serverList: Homework[] = Array.isArray(data.homeworks) ? data.homeworks : [];
-
-    // Seed samples on first run if server DB is empty
-    if (serverList.length === 0) {
-      const localList = loadLocalHomeworks();
-      for (const item of [...localList].reverse()) {
-        await fetch('/api/homeworks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(item),
-        }).catch(() => null);
-      }
-      return {
-        homeworks: localList,
-        submissionCounts: data.submissionCounts || {},
-        serverOnline: true,
-      };
-    }
+    const serverList: Homework[] = (Array.isArray(data.homeworks) ? data.homeworks : []).filter(
+      (item: Homework) => item && !MOCK_SAMPLE_IDS.has(item.id)
+    );
 
     saveLocalHomeworks(serverList);
     return {
