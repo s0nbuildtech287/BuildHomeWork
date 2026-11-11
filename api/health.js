@@ -5,3 +5,4 @@ export default function handler(_req, res) {
     runtime: 'vercel',
   });
 }
+
