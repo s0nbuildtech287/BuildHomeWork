@@ -55,44 +55,6 @@ const DEFAULT_COUNTS_BY_LEVEL: Record<TargetLevel, SectionCountConfig> = {
   },
 };
 
-const QUICK_IDEAS: Array<{
-  label: string;
-  level: TargetLevel;
-  gradeOrClass: string;
-  topic: string;
-  grammarFocus: string;
-  vocabularyFocus: string;
-  studentMistakes: string;
-}> = [
-  {
-    label: 'Tiểu học: Daily Routine',
-    level: 'elementary',
-    gradeOrClass: 'Lớp 4',
-    topic: 'Unit 5: My Daily Routine',
-    grammarFocus: 'Thì Hiện tại đơn (I/you/he/she), hỏi giờ What time...',
-    vocabularyFocus: 'get up, brush teeth, have breakfast, go to school, go to bed',
-    studentMistakes: 'Hay quên thêm s/es cho động từ đi với he/she',
-  },
-  {
-    label: 'THCS: Câu điều kiện loại 1 & 2',
-    level: 'secondary',
-    gradeOrClass: 'Lớp 9',
-    topic: 'Conditional Sentences Type 1 & Type 2',
-    grammarFocus: 'Phân biệt If loại 1 (có thật ở hiện tại/tương lai) và If loại 2 (giả định trái hiện tại)',
-    vocabularyFocus: 'environment, save energy, recycle, pollution',
-    studentMistakes: 'Hay nhầm dùng will trong mệnh đề If và quên lùi thì ở loại 2',
-  },
-  {
-    label: 'Giao tiếp: Ordering Food & Small Talk',
-    level: 'communication',
-    gradeOrClass: 'Giao tiếp cơ bản',
-    topic: 'At a Restaurant & Polite Requests',
-    grammarFocus: 'Would you like..., Could I have..., I’d rather...',
-    vocabularyFocus: 'starter, main course, bill, allergy, recommend, spicy',
-    studentMistakes: 'Hay nói "I want..." thay vì cách nói lịch sự tự nhiên',
-  },
-];
-
 export const GeneratorView: React.FC<GeneratorViewProps> = ({
   settings,
   hasServerGeminiKey,
@@ -222,7 +184,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
       return;
     }
     if (!settings.geminiApiKey.trim() && !hasServerGeminiKey) {
-      setError('Chưa có Gemini API Key. Hãy bấm "Cài đặt API Key" để dán key miễn phí, hoặc chuyển sang tab "Không cần API Key".');
+      setError('Hệ thống tạo bài tự động chưa được kết nối. Bạn có thể chuyển sang "Cách 2: Dùng qua ChatGPT / Gemini web" ngay bên cạnh.');
       return;
     }
 
@@ -238,7 +200,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
       });
       onCreated(homework);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi khi tạo bài tập bằng AI.');
+      setError(err instanceof Error ? err.message : 'Có lỗi khi tạo bài tập tự động.');
     } finally {
       setLoading(false);
     }
@@ -253,7 +215,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
   const handleImportPasted = () => {
     setError('');
     if (!pastedResult.trim()) {
-      setError('Hãy dán kết quả JSON mà ChatGPT hoặc Gemini web trả về vào ô bên trên.');
+      setError('Hãy dán phần bài tập mà ChatGPT hoặc Gemini web trả về vào ô bên trên.');
       return;
     }
     try {
@@ -284,39 +246,9 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      {/* Quick Ideas */}
+      {/* Target Level */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">1. Chọn đối tượng học sinh</h2>
-            <p className="text-xs text-slate-500">
-              Hoặc bấm thử 1 mẫu nhanh bên dưới để điền sẵn nội dung
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {QUICK_IDEAS.map((idea) => (
-              <button
-                key={idea.label}
-                type="button"
-                onClick={() =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    level: idea.level,
-                    gradeOrClass: idea.gradeOrClass,
-                    topic: idea.topic,
-                    grammarFocus: idea.grammarFocus,
-                    vocabularyFocus: idea.vocabularyFocus,
-                    studentMistakes: idea.studentMistakes,
-                    counts: { ...DEFAULT_COUNTS_BY_LEVEL[idea.level] },
-                  }))
-                }
-                className="rounded-full border border-indigo-200 bg-indigo-50/70 px-3 py-1 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100"
-              >
-                + {idea.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <h2 className="mb-3 text-base font-bold text-slate-900">1. Chọn đối tượng học sinh</h2>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
@@ -372,7 +304,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
       {/* Lesson Input */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
         <h2 className="mb-3 text-base font-bold text-slate-900">
-          2. Hôm nay vợ/bạn vừa dạy bài gì?
+          2. Hôm nay bạn vừa dạy bài gì?
         </h2>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -591,7 +523,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            <Sparkles className="h-4 w-4" /> Cách 1: Tự động bằng Gemini AI (1-click)
+            <Sparkles className="h-4 w-4" /> Cách 1: Tạo bài tự động ngay tại đây
           </button>
           <button
             type="button"
@@ -602,7 +534,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            <Wand2 className="h-4 w-4" /> Cách 2: Không cần API Key (Copy Prompt)
+            <Wand2 className="h-4 w-4" /> Cách 2: Tạo qua ChatGPT / Gemini web
           </button>
         </div>
 
@@ -617,24 +549,25 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
             <div className="text-sm text-slate-600">
               {settings.geminiApiKey || hasServerGeminiKey ? (
                 <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
-                  <Check className="h-4 w-4" /> Đã sẵn sàng Gemini API ({settings.geminiModel})
+                  <Check className="h-4 w-4" /> Trợ lý soạn bài tự động đã sẵn sàng
                 </span>
               ) : (
                 <div>
                   <span className="font-medium text-amber-700">
-                    Chưa nhập Gemini API Key miễn phí.
+                    Chưa bật chế độ tạo tự động.
                   </span>{' '}
                   <button
                     type="button"
                     onClick={onOpenSettings}
                     className="font-semibold text-indigo-600 underline"
                   >
-                    Bấm vào đây để dán key (30 giây)
-                  </button>
+                    Thiết lập nhanh
+                  </button>{' '}
+                  hoặc dùng <strong>Cách 2</strong> bên cạnh.
                 </div>
               )}
               <p className="mt-1 text-xs text-slate-500">
-                AI sẽ tự động tạo đề, đáp án và giải thích tiếng Việt để bạn xuất Word / PDF / Link làm bài online.
+                Hệ thống sẽ tự soạn đề, đáp án và giải thích tiếng Việt để bạn tải file Word, in PDF hoặc gửi link cho học sinh làm online.
               </p>
             </div>
 
@@ -658,9 +591,9 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         ) : (
           <div className="space-y-4">
             <div className="rounded-xl bg-slate-50 p-3.5">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-700 uppercase">
-                  Bước A: Copy Prompt chuẩn sư phạm này gửi cho ChatGPT / Gemini web
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700">
+                  Bước 1: Sao chép yêu cầu dưới đây, mở ChatGPT hoặc Gemini trên web rồi dán vào gửi
                 </span>
                 <button
                   type="button"
@@ -669,30 +602,30 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
                 >
                   {copiedPrompt ? (
                     <>
-                      <Check className="h-3.5 w-3.5 text-emerald-400" /> Đã copy Prompt!
+                      <Check className="h-3.5 w-3.5 text-emerald-400" /> Đã sao chép!
                     </>
                   ) : (
                     <>
-                      <ClipboardCopy className="h-3.5 w-3.5" /> Copy Prompt
+                      <ClipboardCopy className="h-3.5 w-3.5" /> Sao chép yêu cầu
                     </>
                   )}
                 </button>
               </div>
-              <pre className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 text-xs whitespace-pre-wrap text-slate-600">
+              <pre className="max-h-36 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 text-xs whitespace-pre-wrap text-slate-600">
                 {generatedPrompt}
               </pre>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-bold text-slate-700 uppercase">
-                Bước B: Dán kết quả AI trả về vào đây để chuyển thành Đề Word / PDF / Quiz Online
+              <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                Bước 2: Sao chép toàn bộ câu trả lời từ ChatGPT / Gemini dán vào ô này
               </label>
               <textarea
                 rows={5}
                 value={pastedResult}
                 onChange={(e) => setPastedResult(e.target.value)}
-                placeholder='Dán nguyên đoạn JSON mà ChatGPT hoặc Gemini trả về vào đây...'
-                className="w-full rounded-xl border border-slate-300 p-3 font-mono text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
+                placeholder='Dán toàn bộ kết quả mà ChatGPT hoặc Gemini vừa trả lời vào đây...'
+                className="w-full rounded-xl border border-slate-300 p-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
               />
               <div className="mt-2 flex justify-end">
                 <button
@@ -700,7 +633,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
                   onClick={handleImportPasted}
                   className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700"
                 >
-                  <Wand2 className="h-4 w-4" /> Chuyển thành Bài Tập Hoàn Chỉnh
+                  <Wand2 className="h-4 w-4" /> Tạo Đề Từ Kết Quả Này
                 </button>
               </div>
             </div>

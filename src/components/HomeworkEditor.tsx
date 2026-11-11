@@ -602,11 +602,11 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                       : 'bg-amber-100 text-amber-700'
                   }`}
                 >
-                  {serverOnline ? 'Server đang bật' : 'Chế độ offline'}
+                  {serverOnline ? 'Đang kết nối' : 'Chế độ ngoại tuyến'}
                 </span>
               </div>
               <p className="mt-1 text-xs text-slate-600">
-                Dùng khi học sinh học chung Wi-Fi / mạng LAN hoặc khi bạn đưa app lên server/hosting. Điểm của học sinh sẽ tự động lưu vào tab <strong>Kết quả học sinh</strong>.
+                Dùng khi học sinh học chung Wi-Fi hoặc khi mở ứng dụng trên mạng. Điểm của học sinh sẽ tự động lưu vào tab <strong>Kết quả học sinh</strong>.
               </p>
               <div className="mt-3 flex items-center gap-2">
                 <input
@@ -632,11 +632,11 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                   Link Độc Lập (Gửi qua Zalo cực tiện)
                 </span>
                 <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
-                  Không cần Database
+                  Mở là làm ngay
                 </span>
               </div>
               <p className="mt-1 text-xs text-slate-600">
-                Toàn bộ câu hỏi được nén sẵn trong đường link. Nếu bạn host trang web này miễn phí (Vercel/Netlify), chỉ cần copy link này gửi vào nhóm Zalo lớp là học sinh làm được ngay!
+                Toàn bộ câu hỏi được gói sẵn trong đường link. Chỉ cần copy link này gửi vào nhóm Zalo lớp là học sinh bấm vào làm và xem điểm ngay.
               </p>
               <div className="mt-3 flex items-center gap-2">
                 <input

@@ -197,7 +197,7 @@ export function App() {
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
               <Settings className="h-4 w-4 text-slate-500" />
-              <span className="hidden sm:inline">Cài đặt AI</span>
+              <span className="hidden sm:inline">Thông tin GV</span>
             </button>
           </nav>
         </div>
