@@ -6,6 +6,7 @@ import {
   FilePlus2,
   FileText,
   FileUp,
+  Headphones,
   Loader2,
   MessageSquare,
   RotateCcw,
@@ -48,6 +49,9 @@ const DEFAULT_COUNTS_BY_LEVEL: Record<TargetLevel, SectionCountConfig> = {
     sentence_order: 3,
     rewrite: 0,
     reading_questions: 0,
+    find_mistake: 0,
+    listening_questions: 0,
+    writing: 0,
   },
   secondary: {
     multiple_choice: 6,
@@ -56,6 +60,9 @@ const DEFAULT_COUNTS_BY_LEVEL: Record<TargetLevel, SectionCountConfig> = {
     sentence_order: 0,
     rewrite: 3,
     reading_questions: 4,
+    find_mistake: 0,
+    listening_questions: 0,
+    writing: 0,
   },
   communication: {
     multiple_choice: 5,
@@ -64,6 +71,9 @@ const DEFAULT_COUNTS_BY_LEVEL: Record<TargetLevel, SectionCountConfig> = {
     sentence_order: 3,
     rewrite: 2,
     reading_questions: 0,
+    find_mistake: 0,
+    listening_questions: 0,
+    writing: 0,
   },
 };
 
@@ -95,12 +105,23 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
       c.word_form +
       c.sentence_order +
       c.rewrite +
-      c.reading_questions
+      c.reading_questions +
+      c.find_mistake +
+      c.listening_questions +
+      c.writing
     );
   }, [config.counts]);
 
   const binaryFilesCount = useMemo(
-    () => materials.filter((m) => m.kind === 'image' || m.kind === 'pdf').length,
+    () =>
+      materials.filter(
+        (m) => m.kind === 'image' || m.kind === 'pdf' || m.kind === 'audio'
+      ).length,
+    [materials]
+  );
+
+  const hasAttachedAudio = useMemo(
+    () => materials.some((m) => m.kind === 'audio'),
     [materials]
   );
 
@@ -113,8 +134,9 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
   );
 
   const generatedPrompt = useMemo(
-    () => buildHomeworkPrompt(config, binaryFilesCount > 0, textDocuments),
-    [config, binaryFilesCount, textDocuments]
+    () =>
+      buildHomeworkPrompt(config, binaryFilesCount > 0, textDocuments, hasAttachedAudio),
+    [config, binaryFilesCount, textDocuments, hasAttachedAudio]
   );
 
   const handleLevelChange = (level: TargetLevel) => {
@@ -136,6 +158,9 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
           sentence_order: 2,
           rewrite: 0,
           reading_questions: 0,
+          find_mistake: 0,
+          listening_questions: 0,
+          writing: 0,
         },
       }));
     } else if (preset === 'standard') {
@@ -147,12 +172,15 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
       setConfig((p) => ({
         ...p,
         counts: {
-          multiple_choice: 6,
+          multiple_choice: 5,
           fill_blank: 4,
           word_form: 3,
           sentence_order: 2,
-          rewrite: 3,
+          rewrite: 2,
           reading_questions: 4,
+          find_mistake: 3,
+          listening_questions: 4,
+          writing: 1,
         },
       }));
     }
@@ -264,6 +292,9 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
     { key: 'sentence_order', label: 'Sắp xếp từ thành câu', desc: 'Rất hợp Tiểu học & Giao tiếp' },
     { key: 'rewrite', label: 'Viết lại câu', desc: 'Luyện biến đổi cấu trúc' },
     { key: 'reading_questions', label: 'Đọc hiểu + câu hỏi', desc: '1 đoạn văn ngắn kèm câu hỏi' },
+    { key: 'find_mistake', label: 'Tìm lỗi sai (A/B/C/D)', desc: 'Chọn phần sai trong câu' },
+    { key: 'listening_questions', label: 'Bài Nghe (Kèm file MP3)', desc: 'Tự tạo giọng đọc hoặc dùng MP3 tải lên' },
+    { key: 'writing', label: 'Bài Viết (Writing)', desc: 'Viết câu / đoạn văn kèm bài mẫu' },
   ];
 
   return (
@@ -427,14 +458,14 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
           </div>
         </div>
 
-        {/* Lesson Materials Upload (Images, Word .docx, PDF, TXT) */}
+        {/* Lesson Materials Upload (Images, Word .docx, PDF, TXT, Audio MP3) */}
         <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-3.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-xs text-slate-600">
               <strong className="text-slate-800">
-                Tải tài liệu buổi học (Ảnh, Word .docx, PDF, TXT — tùy chọn):
+                Tải tài liệu buổi học (Ảnh, Word .docx, PDF, TXT, Âm thanh MP3 — tùy chọn):
               </strong>{' '}
-              Tải lên file từ mới (New Words), tài liệu ngữ pháp hoặc ảnh chụp trang sách để ra bài sát nhất (tối đa 5 tệp).
+              Tải file từ mới, ngữ pháp, ảnh trang sách hoặc file nghe MP3 có sẵn để hệ thống soạn đề bám sát bài (tối đa 5 tệp).
             </div>
             <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
               {readingFiles ? (
@@ -443,12 +474,12 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
                 </>
               ) : (
                 <>
-                  <FileUp className="h-4 w-4 text-indigo-600" /> Chọn tệp / ảnh
+                  <FileUp className="h-4 w-4 text-indigo-600" /> Chọn tệp / ảnh / MP3
                 </>
               )}
               <input
                 type="file"
-                accept="image/*,.pdf,.docx,.txt,.md,.csv"
+                accept="image/*,audio/*,.mp3,.wav,.m4a,.ogg,.pdf,.docx,.txt,.md,.csv"
                 multiple
                 disabled={readingFiles || materials.length >= 5}
                 onChange={handleFileUpload}
@@ -480,6 +511,34 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
+                    </div>
+                  );
+                }
+
+                if (item.kind === 'audio') {
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex flex-col gap-1.5 rounded-xl border border-indigo-200 bg-white p-2.5 text-xs shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 font-semibold text-indigo-900">
+                          <Headphones className="h-4 w-4 text-indigo-600" />
+                          <span className="max-w-[180px] truncate" title={item.name}>
+                            {item.name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setMaterials((prev) => prev.filter((m) => m.id !== item.id))
+                          }
+                          className="rounded-lg p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <audio controls src={item.previewUrl} className="h-8 w-56" />
                     </div>
                   );
                 }

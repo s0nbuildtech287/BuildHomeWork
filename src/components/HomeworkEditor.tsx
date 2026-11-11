@@ -8,17 +8,26 @@ import {
   Eye,
   FileText,
   Globe,
+  Headphones,
+  Loader2,
   Plus,
   Printer,
   Save,
   Shuffle,
   Trash2,
   Users,
+  Volume2,
 } from 'lucide-react';
+import { generateTtsAudio } from '../services/gemini';
 import { fetchSubmissions } from '../services/storage';
-import { Homework, Question, StudentSubmission } from '../types';
+import { Homework, HomeworkSection, Question, StudentSubmission } from '../types';
 import { DocxExportMode, exportHomeworkToDocx } from '../utils/docxExport';
-import { countHomeworkQuestions, resolveCorrectOptionIndex, stripOptionPrefix } from '../utils/grading';
+import {
+  countHomeworkQuestions,
+  isChoiceQuestion,
+  resolveCorrectOptionIndex,
+  stripOptionPrefix,
+} from '../utils/grading';
 import { createId } from '../utils/promptBuilder';
 import { buildServerQuizUrl, buildStandaloneQuizUrl } from '../utils/shareCodec';
 
@@ -48,6 +57,7 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
   const [copiedKey, setCopiedKey] = useState<'server' | 'standalone' | null>(null);
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
+  const [generatingAudioSecId, setGeneratingAudioSecId] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(homework);
@@ -108,15 +118,22 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
           prompt:
             sec.type === 'sentence_order'
               ? 'Arrange the words:'
-              : 'New question ______ here.',
-          options: sec.type === 'multiple_choice' ? ['Option A', 'Option B', 'Option C', 'Option D'] : undefined,
+              : sec.type === 'writing'
+                ? 'Write 4-5 sentences about your topic:'
+                : 'New question ______ here.',
+          options:
+            sec.type === 'multiple_choice' || sec.type === 'find_mistake'
+              ? ['Option A', 'Option B', 'Option C', 'Option D']
+              : undefined,
           words: sec.type === 'sentence_order' ? ['I', 'like', 'English.'] : undefined,
           correctAnswer:
-            sec.type === 'multiple_choice'
+            sec.type === 'multiple_choice' || sec.type === 'find_mistake'
               ? 'Option A'
               : sec.type === 'sentence_order'
                 ? 'I like English.'
-                : 'answer',
+                : sec.type === 'writing'
+                  ? 'Sample writing answer.'
+                  : 'answer',
           explanation: 'Giải thích ngắn gọn bằng tiếng Việt.',
         };
         return { ...sec, questions: [...sec.questions, newQ] };
@@ -149,6 +166,32 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
         };
       }),
     }));
+  };
+
+  const handleRegenerateAudio = async (sec: HomeworkSection) => {
+    const scriptText = (sec.listeningScript || '').trim();
+    if (!scriptText) {
+      alert('Hãy nhập nội dung lời thoại tiếng Anh trước khi tạo file MP3.');
+      return;
+    }
+    setGeneratingAudioSecId(sec.id);
+    try {
+      const voice = sec.audioVoice || 'en-US-AriaNeural';
+      const rate = sec.audioRate || (draft.level === 'elementary' ? '-15%' : '+0%');
+      const audioUrl = await generateTtsAudio({ text: scriptText, voice, rate });
+      const nextDraft: Homework = {
+        ...draft,
+        sections: draft.sections.map((s) =>
+          s.id === sec.id ? { ...s, audioUrl, audioVoice: voice, audioRate: rate } : s
+        ),
+      };
+      setDraft(nextDraft);
+      await onSave(nextDraft);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Không tạo được file MP3.');
+    } finally {
+      setGeneratingAudioSecId(null);
+    }
   };
 
   const copyLink = async (type: 'server' | 'standalone') => {
@@ -415,11 +458,108 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                 </div>
               )}
 
+              {(section.listeningScript !== undefined || section.audioUrl) && (
+                <div className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50/50 p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-indigo-900">
+                      <Headphones className="h-4 w-4 text-indigo-600" />
+                      File nghe MP3 & Lời thoại (Tapescript)
+                    </div>
+                    {section.audioUrl && (
+                      <a
+                        href={section.audioUrl}
+                        download={`${draft.title.replace(/[^a-zA-Z0-9_-]+/g, '_')}_listening.mp3`}
+                        className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                      >
+                        <Download className="h-3.5 w-3.5" /> Tải file .MP3
+                      </a>
+                    )}
+                  </div>
+
+                  {section.audioUrl && (
+                    <audio controls src={section.audioUrl} className="h-9 w-full" />
+                  )}
+
+                  <textarea
+                    rows={3}
+                    value={section.listeningScript || ''}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        sections: prev.sections.map((s) =>
+                          s.id === section.id ? { ...s, listeningScript: e.target.value } : s
+                        ),
+                      }))
+                    }
+                    placeholder="Nội dung bài nghe tiếng Anh để tạo giọng đọc MP3..."
+                    className="w-full rounded-xl border border-indigo-200 bg-white p-3 text-sm leading-relaxed text-slate-800 focus:border-indigo-500 focus:outline-none"
+                  />
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={section.audioVoice || 'en-US-AriaNeural'}
+                      onChange={(e) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          sections: prev.sections.map((s) =>
+                            s.id === section.id ? { ...s, audioVoice: e.target.value } : s
+                          ),
+                        }))
+                      }
+                      className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700"
+                    >
+                      <option value="en-US-AriaNeural">Giọng Nữ Mỹ (Aria)</option>
+                      <option value="en-US-GuyNeural">Giọng Nam Mỹ (Guy)</option>
+                      <option value="en-GB-SoniaNeural">Giọng Nữ Anh (Sonia)</option>
+                      <option value="en-GB-RyanNeural">Giọng Nam Anh (Ryan)</option>
+                      <option value="en-AU-NatashaNeural">Giọng Nữ Úc (Natasha)</option>
+                    </select>
+
+                    <select
+                      value={
+                        section.audioRate || (draft.level === 'elementary' ? '-15%' : '+0%')
+                      }
+                      onChange={(e) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          sections: prev.sections.map((s) =>
+                            s.id === section.id ? { ...s, audioRate: e.target.value } : s
+                          ),
+                        }))
+                      }
+                      className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700"
+                    >
+                      <option value="-20%">Rất chậm (-20% - Tiểu học)</option>
+                      <option value="-15%">Chậm vừa (-15%)</option>
+                      <option value="+0%">Tốc độ chuẩn</option>
+                      <option value="+10%">Nhanh hơn (+10%)</option>
+                    </select>
+
+                    <button
+                      type="button"
+                      disabled={generatingAudioSecId === section.id}
+                      onClick={() => handleRegenerateAudio(section)}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-60"
+                    >
+                      {generatingAudioSecId === section.id ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang tạo MP3...
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="h-3.5 w-3.5" />{' '}
+                          {section.audioUrl ? 'Tạo lại file MP3' : 'Tạo file MP3 từ lời thoại'}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 {section.questions.map((q) => {
                   const qNum = questionNumber++;
-                  const correctIdx =
-                    q.type === 'multiple_choice' ? resolveCorrectOptionIndex(q) : -1;
+                  const correctIdx = isChoiceQuestion(q) ? resolveCorrectOptionIndex(q) : -1;
 
                   return (
                     <div
@@ -461,7 +601,7 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                             </div>
                           )}
 
-                          {q.type === 'multiple_choice' && q.options && (
+                          {isChoiceQuestion(q) && q.options && (
                             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                               {q.options.map((opt, idx) => {
                                 const isAns = idx === correctIdx;
@@ -514,33 +654,63 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                             <div className="grid grid-cols-1 gap-2 rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 sm:grid-cols-2">
                               <div>
                                 <label className="block text-[11px] font-bold text-emerald-800">
-                                  Đáp án chuẩn (nhiều đáp án ngăn cách bởi | )
+                                  {q.type === 'writing'
+                                    ? 'Bài viết mẫu tham khảo'
+                                    : 'Đáp án chuẩn (nhiều đáp án ngăn cách bởi | )'}
                                 </label>
-                                <input
-                                  type="text"
-                                  value={q.correctAnswer}
-                                  onChange={(e) =>
-                                    updateQuestion(section.id, q.id, {
-                                      correctAnswer: e.target.value,
-                                    })
-                                  }
-                                  className="mt-0.5 w-full rounded border border-emerald-200 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-900"
-                                />
+                                {q.type === 'writing' ? (
+                                  <textarea
+                                    rows={3}
+                                    value={q.correctAnswer}
+                                    onChange={(e) =>
+                                      updateQuestion(section.id, q.id, {
+                                        correctAnswer: e.target.value,
+                                      })
+                                    }
+                                    className="mt-0.5 w-full rounded border border-emerald-200 bg-white px-2.5 py-1 text-xs text-emerald-900"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={q.correctAnswer}
+                                    onChange={(e) =>
+                                      updateQuestion(section.id, q.id, {
+                                        correctAnswer: e.target.value,
+                                      })
+                                    }
+                                    className="mt-0.5 w-full rounded border border-emerald-200 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-900"
+                                  />
+                                )}
                               </div>
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-600">
-                                  Giải thích cho học sinh
+                                  {q.type === 'writing'
+                                    ? 'Tiêu chí chấm & gợi ý từ vựng'
+                                    : 'Giải thích cho học sinh'}
                                 </label>
-                                <input
-                                  type="text"
-                                  value={q.explanation}
-                                  onChange={(e) =>
-                                    updateQuestion(section.id, q.id, {
-                                      explanation: e.target.value,
-                                    })
-                                  }
-                                  className="mt-0.5 w-full rounded border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700"
-                                />
+                                {q.type === 'writing' ? (
+                                  <textarea
+                                    rows={3}
+                                    value={q.explanation}
+                                    onChange={(e) =>
+                                      updateQuestion(section.id, q.id, {
+                                        explanation: e.target.value,
+                                      })
+                                    }
+                                    className="mt-0.5 w-full rounded border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={q.explanation}
+                                    onChange={(e) =>
+                                      updateQuestion(section.id, q.id, {
+                                        explanation: e.target.value,
+                                      })
+                                    }
+                                    className="mt-0.5 w-full rounded border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700"
+                                  />
+                                )}
                               </div>
                             </div>
                           )}

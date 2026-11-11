@@ -23,6 +23,9 @@ export const DEFAULT_GENERATOR_CONFIG: GeneratorConfig = {
     sentence_order: 0,
     rewrite: 3,
     reading_questions: 4,
+    find_mistake: 0,
+    listening_questions: 0,
+    writing: 0,
   },
 };
 

@@ -1,8 +1,12 @@
 import cors from 'cors';
 import express from 'express';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,12 +38,16 @@ loadDotEnv();
 
 const PORT = process.env.PORT || 3001;
 const DATA_DIR = path.join(__dirname, 'data');
+const AUDIO_DIR = path.join(DATA_DIR, 'audio');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const DIST_DIR = path.join(__dirname, 'dist');
 
 function ensureDb() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(AUDIO_DIR)) {
+    fs.mkdirSync(AUDIO_DIR, { recursive: true });
   }
   if (!fs.existsSync(DB_FILE)) {
     const initial = { homeworks: [], submissions: [] };
@@ -98,11 +106,19 @@ function resolveCorrectOptionIndex(question) {
   );
 }
 
+function isChoiceQuestion(question) {
+  return question.type === 'multiple_choice' || question.type === 'find_mistake';
+}
+
 function isCorrect(question, studentAnswer) {
+  if (question.type === 'writing') {
+    return String(studentAnswer || '').trim().length > 0;
+  }
+
   const studentNorm = normalizeAnswer(studentAnswer);
   if (!studentNorm) return false;
 
-  if (question.type === 'multiple_choice' && Array.isArray(question.options) && question.options.length > 0) {
+  if (isChoiceQuestion(question) && Array.isArray(question.options) && question.options.length > 0) {
     const correctIdx = resolveCorrectOptionIndex(question);
     if (correctIdx >= 0) {
       const correctOptionText = stripOptionPrefix(question.options[correctIdx]);
@@ -122,9 +138,94 @@ function isCorrect(question, studentAnswer) {
   return accepted.some((a) => a === studentNorm);
 }
 
+const ALLOWED_TTS_VOICES = new Set([
+  'en-US-AriaNeural',
+  'en-US-GuyNeural',
+  'en-GB-SoniaNeural',
+  'en-GB-RyanNeural',
+  'en-AU-NatashaNeural',
+]);
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
+
+ensureDb();
+app.use('/api/audio', express.static(AUDIO_DIR));
+
+// Upload MP3 / audio file attached by teacher
+app.post('/api/audio/upload', (req, res) => {
+  const { filename = 'audio.mp3', base64Data, mimeType = 'audio/mpeg' } = req.body || {};
+  if (!base64Data || typeof base64Data !== 'string') {
+    return res.status(400).json({ error: 'Thiếu dữ liệu âm thanh để tải lên.' });
+  }
+
+  const extMatch = String(filename).toLowerCase().match(/\.(mp3|wav|m4a|ogg)$/);
+  const extFromMime =
+    mimeType === 'audio/wav'
+      ? '.wav'
+      : mimeType === 'audio/mp4'
+        ? '.m4a'
+        : mimeType === 'audio/ogg'
+          ? '.ogg'
+          : '.mp3';
+  const ext = extMatch ? `.${extMatch[1]}` : extFromMime;
+
+  const outName = `upload_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}${ext}`;
+  const outPath = path.join(AUDIO_DIR, outName);
+
+  try {
+    ensureDb();
+    fs.writeFileSync(outPath, Buffer.from(base64Data, 'base64'));
+    return res.json({ audioUrl: `/api/audio/${outName}` });
+  } catch (err) {
+    return res.status(500).json({ error: err?.message || 'Không lưu được file âm thanh.' });
+  }
+});
+
+// Generate MP3 from listening script using Microsoft Edge Neural Voices (edge-tts)
+app.post('/api/audio/tts', async (req, res) => {
+  const { text, voice = 'en-US-AriaNeural', rate = '+0%' } = req.body || {};
+  const cleanText = String(text || '').trim();
+  if (!cleanText) {
+    return res.status(400).json({ error: 'Chưa có nội dung bài nghe để tạo file MP3.' });
+  }
+  if (cleanText.length > 5000) {
+    return res.status(400).json({ error: 'Nội dung bài nghe quá dài (tối đa 5.000 ký tự).' });
+  }
+
+  const safeVoice = ALLOWED_TTS_VOICES.has(voice) ? voice : 'en-US-AriaNeural';
+  const safeRate = /^[+-]\d{1,2}%$/.test(String(rate)) ? String(rate) : '+0%';
+
+  // Strip speaker labels like "Speaker A:" if formatted as plain reading, or keep readable pauses
+  const spokenText = cleanText.replace(/\r?\n+/g, ' ... ');
+  const outName = `tts_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}.mp3`;
+  const outPath = path.join(AUDIO_DIR, outName);
+
+  try {
+    ensureDb();
+    await execFileAsync(
+      'python',
+      [
+        '-m',
+        'edge_tts',
+        '--text',
+        spokenText,
+        '--voice',
+        safeVoice,
+        `--rate=${safeRate}`,
+        '--write-media',
+        outPath,
+      ],
+      { timeout: 45000 }
+    );
+    return res.json({ audioUrl: `/api/audio/${outName}` });
+  } catch (err) {
+    return res.status(500).json({
+      error: err?.message || 'Không tạo được file MP3 từ nội dung nghe.',
+    });
+  }
+});
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -239,6 +340,7 @@ app.get('/api/quiz/:id', (req, res) => {
     ...hw,
     sections: hw.sections.map((sec) => ({
       ...sec,
+      listeningScript: '',
       questions: sec.questions.map((q) => ({
         id: q.id,
         type: q.type,
@@ -272,15 +374,21 @@ app.post('/api/quiz/:id/submit', (req, res) => {
 
   const results = [];
   let score = 0;
+  let objectiveTotal = 0;
 
   for (const sec of hw.sections) {
     for (const q of sec.questions) {
       const studentAnswer = String(answers[q.id] || '');
+      const isWriting = q.type === 'writing';
       const ok = isCorrect(q, studentAnswer);
-      if (ok) score += 1;
+
+      if (!isWriting) {
+        objectiveTotal += 1;
+        if (ok) score += 1;
+      }
 
       let displayCorrect = q.correctAnswer;
-      if (q.type === 'multiple_choice' && Array.isArray(q.options) && q.options.length > 0) {
+      if (isChoiceQuestion(q) && Array.isArray(q.options) && q.options.length > 0) {
         const idx = resolveCorrectOptionIndex(q);
         if (idx >= 0) {
           displayCorrect = `${String.fromCharCode(65 + idx)}. ${stripOptionPrefix(q.options[idx])}`;
@@ -292,6 +400,7 @@ app.post('/api/quiz/:id/submit', (req, res) => {
         studentAnswer,
         correctAnswer: displayCorrect,
         isCorrect: ok,
+        isManualReview: isWriting,
         explanation: q.explanation,
       });
     }
@@ -304,7 +413,7 @@ app.post('/api/quiz/:id/submit', (req, res) => {
     studentClass: String(studentClass || '').trim(),
     submittedAt: new Date().toISOString(),
     score,
-    totalQuestions: results.length,
+    totalQuestions: objectiveTotal,
     answers,
     results,
   };

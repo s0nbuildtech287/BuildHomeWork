@@ -28,6 +28,10 @@ export function stripOptionPrefix(text: string): string {
   return (text || '').replace(/^[A-Da-d][.)]\s*/, '').trim();
 }
 
+export function isChoiceQuestion(question: Question): boolean {
+  return question.type === 'multiple_choice' || question.type === 'find_mistake';
+}
+
 export function resolveCorrectOptionIndex(question: Question): number {
   const options = question.options || [];
   if (options.length === 0) return -1;
@@ -47,10 +51,14 @@ export function resolveCorrectOptionIndex(question: Question): number {
 }
 
 export function isQuestionAnswerCorrect(question: Question, studentAnswer: string): boolean {
+  if (question.type === 'writing') {
+    return studentAnswer.trim().length > 0;
+  }
+
   const studentNorm = normalizeAnswer(studentAnswer);
   if (!studentNorm) return false;
 
-  if (question.type === 'multiple_choice' && question.options?.length) {
+  if (isChoiceQuestion(question) && question.options?.length) {
     const correctIdx = resolveCorrectOptionIndex(question);
     if (correctIdx >= 0) {
       const correctOptionText = stripOptionPrefix(question.options[correctIdx]);
@@ -81,15 +89,21 @@ export function gradeHomework(
 } {
   const results: GradedQuestionResult[] = [];
   let score = 0;
+  let objectiveTotal = 0;
 
   for (const section of homework.sections) {
     for (const q of section.questions) {
       const studentAnswer = answers[q.id] || '';
+      const isWriting = q.type === 'writing';
       const isCorrect = isQuestionAnswerCorrect(q, studentAnswer);
-      if (isCorrect) score += 1;
+
+      if (!isWriting) {
+        objectiveTotal += 1;
+        if (isCorrect) score += 1;
+      }
 
       let displayCorrect = q.correctAnswer;
-      if (q.type === 'multiple_choice' && q.options?.length) {
+      if (isChoiceQuestion(q) && q.options?.length) {
         const idx = resolveCorrectOptionIndex(q);
         if (idx >= 0) {
           displayCorrect = `${String.fromCharCode(65 + idx)}. ${stripOptionPrefix(q.options[idx])}`;
@@ -101,6 +115,7 @@ export function gradeHomework(
         studentAnswer,
         correctAnswer: displayCorrect,
         isCorrect,
+        isManualReview: isWriting,
         explanation: q.explanation,
       });
     }
@@ -108,7 +123,7 @@ export function gradeHomework(
 
   return {
     score,
-    totalQuestions: results.length,
+    totalQuestions: objectiveTotal,
     results,
   };
 }
@@ -116,4 +131,3 @@ export function gradeHomework(
 export function countHomeworkQuestions(homework: Homework): number {
   return homework.sections.reduce((acc, s) => acc + s.questions.length, 0);
 }
-

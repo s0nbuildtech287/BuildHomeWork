@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { Homework } from '../types';
-import { resolveCorrectOptionIndex, stripOptionPrefix } from '../utils/grading';
+import { isChoiceQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from '../utils/grading';
 
 interface PrintWorksheetProps {
   homework: Homework;
@@ -15,6 +15,9 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
 
   let questionCounter = 1;
   const answerSummary: Array<{ num: number; answer: string; explanation: string }> = [];
+  const listeningScripts = homework.sections
+    .filter((s) => Boolean(s.listeningScript))
+    .map((s) => ({ title: s.title, script: s.listeningScript || '' }));
 
   return (
     <div className="min-h-screen bg-slate-100 pb-12">
@@ -106,7 +109,7 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                 {section.questions.map((q) => {
                   const qNum = questionCounter++;
                   let displayCorrect = q.correctAnswer;
-                  if (q.type === 'multiple_choice' && q.options?.length) {
+                  if (isChoiceQuestion(q) && q.options?.length) {
                     const idx = resolveCorrectOptionIndex(q);
                     if (idx >= 0) {
                       displayCorrect = `${String.fromCharCode(65 + idx)}. ${stripOptionPrefix(
@@ -132,12 +135,12 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                           </p>
                         </div>
                       ) : (
-                        <p>
+                        <p className="whitespace-pre-line">
                           <strong>{qNum}.</strong> {q.prompt}
                         </p>
                       )}
 
-                      {q.type === 'multiple_choice' && q.options?.length && (
+                      {isChoiceQuestion(q) && q.options?.length && (
                         <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1 pl-5 sm:grid-cols-4">
                           {q.options.map((opt, idx) => (
                             <span key={idx}>
@@ -152,6 +155,15 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                         <p className="mt-1 pl-5 text-slate-500">
                           → ..........................................................................................................
                         </p>
+                      )}
+
+                      {q.type === 'writing' && (
+                        <div className="mt-2 space-y-2 pl-5 text-slate-400">
+                          <p>................................................................................................................</p>
+                          <p>................................................................................................................</p>
+                          <p>................................................................................................................</p>
+                          <p>................................................................................................................</p>
+                        </div>
                       )}
                     </div>
                   );
@@ -171,13 +183,25 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
               {answerSummary.map((item) => (
                 <div key={item.num} className="avoid-break">
                   <strong>Câu {item.num}:</strong>{' '}
-                  <span className="font-semibold text-emerald-800">{item.answer}</span>
+                  <span className="font-semibold text-emerald-800 whitespace-pre-line">{item.answer}</span>
                   {mode === 'teacher' && item.explanation && (
                     <span className="text-slate-600"> — {item.explanation}</span>
                   )}
                 </div>
               ))}
             </div>
+
+            {listeningScripts.length > 0 && (
+              <div className="mt-6 space-y-3 border-t border-slate-200 pt-4 text-sm">
+                <h3 className="font-bold text-slate-900 uppercase">Listening Tapescript</h3>
+                {listeningScripts.map((ls, idx) => (
+                  <div key={idx} className="rounded bg-slate-50 p-3">
+                    <div className="font-semibold text-slate-800">{ls.title}</div>
+                    <p className="mt-1 text-slate-700 whitespace-pre-line">{ls.script}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

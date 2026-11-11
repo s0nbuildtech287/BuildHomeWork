@@ -35,7 +35,8 @@ export interface TextDocumentInput {
 export function buildHomeworkPrompt(
   config: GeneratorConfig,
   hasAttachedBinaryFiles = false,
-  textDocuments: TextDocumentInput[] = []
+  textDocuments: TextDocumentInput[] = [],
+  hasAttachedAudio = false
 ): string {
   const requestedParts: string[] = [];
 
@@ -69,9 +70,25 @@ export function buildHomeworkPrompt(
       `- 1 section Đọc hiểu (type: "multiple_choice") có field "readingPassage" (đoạn văn tiếng Anh phù hợp trình độ, khoảng 80-160 từ) kèm ${config.counts.reading_questions} câu hỏi trắc nghiệm hiểu bài.`
     );
   }
+  if (config.counts.find_mistake > 0) {
+    requestedParts.push(
+      `- "find_mistake": ${config.counts.find_mistake} câu Tìm lỗi sai (trong "prompt" đánh dấu 4 cụm từ bằng (A), (B), (C), (D), ví dụ: "She (A) go to (B) school (C) by bus (D) every morning."; "options" gồm đúng 4 cụm tương ứng không kèm chữ cái A/B/C/D hoặc ghi ngắn gọn đúng cụm từ đó; "correctAnswer" là phần bị sai cần sửa; "explanation" nêu rõ lỗi sai và cách sửa đúng bằng tiếng Việt).`
+    );
+  }
+  if (config.counts.listening_questions > 0 || hasAttachedAudio) {
+    const listenCount = config.counts.listening_questions > 0 ? config.counts.listening_questions : 4;
+    requestedParts.push(
+      `- 1 section Bài Nghe (Listening, type: "multiple_choice", title có chữ "Listening") có field "listeningScript" (lời thoại / bài đọc tiếng Anh hoàn chỉnh 60-150 từ, KHÔNG dùng ký hiệu lạ, dùng câu tự nhiên dễ đọc thành âm thanh; nếu có file âm thanh đính kèm thì nghe đúng file âm thanh đó để chép lại nội dung vào "listeningScript") kèm ${listenCount} câu hỏi nghe hiểu.`
+    );
+  }
+  if (config.counts.writing > 0) {
+    requestedParts.push(
+      `- "writing": ${config.counts.writing} bài tập Viết (Writing — viết câu theo gợi ý hoặc viết đoạn văn ngắn/email phù hợp cấp học; "prompt" nêu rõ yêu cầu đề bài và gợi ý số từ/từ khóa; "correctAnswer" ghi bài viết mẫu tham khảo; "explanation" ghi tiêu chí chấm & cấu trúc cần dùng bằng tiếng Việt).`
+    );
+  }
 
   const binaryNote = hasAttachedBinaryFiles
-    ? '\nLƯU Ý TÀI LIỆU / ẢNH ĐÍNH KÈM: Giáo viên có gửi kèm ảnh trang sách hoặc file PDF tài liệu buổi học (từ vựng / ngữ pháp). Hãy đọc kỹ nội dung trong đó để ra bài tập bám sát chính xác bài học.'
+    ? '\nLƯU Ý TÀI LIỆU / ẢNH / ÂM THANH ĐÍNH KÈM: Giáo viên có gửi kèm ảnh trang sách, file PDF hoặc file âm thanh (.mp3) của buổi học. Hãy đọc/nghe kỹ nội dung trong tệp đính kèm để ra bài tập bám sát chính xác.'
     : '';
 
   const docsSection =
@@ -112,6 +129,7 @@ Chỉ trả về DUY NHẤT một khối JSON hợp lệ (không giải thích t
       "instruction": "Choose the best answer A, B, C, or D to complete each sentence.",
       "type": "multiple_choice",
       "readingPassage": "",
+      "listeningScript": "",
       "wordBank": [],
       "questions": [
         {
@@ -141,6 +159,8 @@ function normalizeQuestionType(raw: unknown, fallback: QuestionType): QuestionTy
     'word_form',
     'sentence_order',
     'rewrite',
+    'find_mistake',
+    'writing',
   ];
   if (typeof raw === 'string' && allowed.includes(raw as QuestionType)) {
     return raw as QuestionType;
@@ -211,7 +231,11 @@ export function parseAiHomeworkResponse(
             : undefined;
 
           let correctAnswer = String(q.correctAnswer ?? '').trim();
-          if (qType === 'multiple_choice' && options && options.length > 0) {
+          if (
+            (qType === 'multiple_choice' || qType === 'find_mistake') &&
+            options &&
+            options.length > 0
+          ) {
             // If AI returned "B" or "B. goes", resolve to clean option text when unambiguous
             const letterOnly = correctAnswer.match(/^([A-Da-d])(?:[.)])?$/);
             if (letterOnly) {
@@ -250,6 +274,7 @@ export function parseAiHomeworkResponse(
         instruction: String(sec.instruction ?? 'Complete the exercises below.').trim(),
         type: secType,
         readingPassage: sec.readingPassage ? String(sec.readingPassage).trim() : undefined,
+        listeningScript: sec.listeningScript ? String(sec.listeningScript).trim() : undefined,
         wordBank: wordBank && wordBank.length > 0 ? wordBank : undefined,
         questions,
       };

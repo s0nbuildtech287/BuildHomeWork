@@ -5,17 +5,19 @@ export type QuestionType =
   | 'fill_blank'
   | 'word_form'
   | 'sentence_order'
-  | 'rewrite';
+  | 'rewrite'
+  | 'find_mistake'
+  | 'writing';
 
 export interface Question {
   id: string;
   type: QuestionType;
   prompt: string;
-  options?: string[]; // Used for multiple_choice
+  options?: string[]; // Used for multiple_choice and find_mistake
   words?: string[]; // Used for sentence_order
   hint?: string; // Optional base verb, keyword, or word cue
-  correctAnswer: string; // Supports multiple valid answers separated by " | "
-  explanation: string; // Vietnamese explanation for students & teacher
+  correctAnswer: string; // Supports multiple valid answers separated by " | "; model essay for writing
+  explanation: string; // Vietnamese explanation or writing rubric for students & teacher
 }
 
 export interface HomeworkSection {
@@ -24,6 +26,10 @@ export interface HomeworkSection {
   instruction: string;
   type: QuestionType;
   readingPassage?: string;
+  listeningScript?: string;
+  audioUrl?: string;
+  audioVoice?: string;
+  audioRate?: string;
   wordBank?: string[];
   questions: Question[];
 }
@@ -50,6 +56,9 @@ export interface SectionCountConfig {
   sentence_order: number;
   rewrite: number;
   reading_questions: number;
+  find_mistake: number;
+  listening_questions: number;
+  writing: number;
 }
 
 export interface GeneratorConfig {
@@ -76,6 +85,7 @@ export interface GradedQuestionResult {
   studentAnswer: string;
   correctAnswer: string;
   isCorrect: boolean;
+  isManualReview?: boolean;
   explanation: string;
 }
 
@@ -90,4 +100,3 @@ export interface StudentSubmission {
   answers: Record<string, string>;
   results: GradedQuestionResult[];
 }
-

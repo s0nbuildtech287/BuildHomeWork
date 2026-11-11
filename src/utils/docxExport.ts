@@ -14,7 +14,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Homework } from '../types';
-import { resolveCorrectOptionIndex, stripOptionPrefix } from './grading';
+import { isChoiceQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from './grading';
 
 export type DocxExportMode = 'student' | 'student_with_key' | 'teacher';
 
@@ -162,8 +162,12 @@ export async function exportHomeworkToDocx(
     answer: string;
     explanation: string;
   }> = [];
+  const listeningScripts: Array<{ title: string; script: string }> = [];
 
   for (const section of homework.sections) {
+    if (section.listeningScript) {
+      listeningScripts.push({ title: section.title, script: section.listeningScript });
+    }
     children.push(
       new Paragraph({
         spacing: { before: 140, after: 40 },
@@ -264,7 +268,7 @@ export async function exportHomeworkToDocx(
         );
       }
 
-      if (q.type === 'multiple_choice' && q.options?.length) {
+      if (isChoiceQuestion(q) && q.options?.length) {
         const optionText = q.options
           .map((opt, idx) => `${String.fromCharCode(65 + idx)}. ${stripOptionPrefix(opt)}`)
           .join('          ');
@@ -293,8 +297,26 @@ export async function exportHomeworkToDocx(
         );
       }
 
+      if (q.type === 'writing') {
+        for (let lineIdx = 0; lineIdx < 4; lineIdx++) {
+          children.push(
+            new Paragraph({
+              spacing: { after: lineIdx === 3 ? 110 : 70 },
+              indent: { left: 320 },
+              children: [
+                new TextRun({
+                  text: '____________________________________________________________________',
+                  size: 21,
+                  color: '94A3B8',
+                }),
+              ],
+            })
+          );
+        }
+      }
+
       let answerDisplay = q.correctAnswer;
-      if (q.type === 'multiple_choice' && q.options?.length) {
+      if (isChoiceQuestion(q) && q.options?.length) {
         const idx = resolveCorrectOptionIndex(q);
         if (idx >= 0) {
           answerDisplay = `${String.fromCharCode(65 + idx)}. ${stripOptionPrefix(q.options[idx])}`;
@@ -354,6 +376,36 @@ export async function exportHomeworkToDocx(
           children: runs,
         })
       );
+    }
+
+    if (listeningScripts.length > 0) {
+      children.push(
+        new Paragraph({
+          spacing: { before: 180, after: 80 },
+          children: [
+            new TextRun({
+              text: 'LISTENING TAPESCRIPT',
+              bold: true,
+              size: 23,
+              color: '1E293B',
+            }),
+          ],
+        })
+      );
+      for (const ls of listeningScripts) {
+        children.push(
+          new Paragraph({
+            spacing: { after: 40 },
+            children: [new TextRun({ text: ls.title, bold: true, size: 21 })],
+          })
+        );
+        children.push(
+          new Paragraph({
+            spacing: { after: 100 },
+            children: [new TextRun({ text: ls.script, size: 21, color: '334155' })],
+          })
+        );
+      }
     }
   }
 

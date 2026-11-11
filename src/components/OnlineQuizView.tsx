@@ -3,13 +3,15 @@ import {
   ArrowLeft,
   Award,
   CheckCircle2,
+  Headphones,
   RotateCcw,
   Send,
+  Volume2,
   XCircle,
 } from 'lucide-react';
 import { saveLocalSubmission } from '../services/storage';
 import { GradedQuestionResult, Homework, StudentSubmission } from '../types';
-import { gradeHomework, stripOptionPrefix } from '../utils/grading';
+import { gradeHomework, isChoiceQuestion, stripOptionPrefix } from '../utils/grading';
 import { createId } from '../utils/promptBuilder';
 import { decodeHomeworkFromHash } from '../utils/shareCodec';
 
@@ -204,13 +206,19 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                     Chúc mừng {submission.studentName} đã hoàn thành!
                   </h2>
                   <p className="text-sm text-emerald-800">
-                    Kết quả:{' '}
-                    <strong className="text-lg">
-                      {submission.score} / {submission.totalQuestions}
-                    </strong>{' '}
-                    câu đúng (
-                    {Math.round((submission.score / Math.max(1, submission.totalQuestions)) * 100)}
-                    %)
+                    {submission.totalQuestions > 0 ? (
+                      <>
+                        Kết quả trắc nghiệm/điền từ:{' '}
+                        <strong className="text-lg">
+                          {submission.score} / {submission.totalQuestions}
+                        </strong>{' '}
+                        câu đúng (
+                        {Math.round((submission.score / submission.totalQuestions) * 100)}
+                        %)
+                      </>
+                    ) : (
+                      'Bài làm của em đã được ghi nhận! Hãy xem bài mẫu gợi ý bên dưới nhé.'
+                    )}
                   </p>
                 </div>
               </div>
@@ -272,6 +280,52 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                 </div>
               )}
 
+              {(section.audioUrl || section.listeningScript) && (
+                <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4 space-y-2.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-indigo-900">
+                    <Headphones className="h-4 w-4 text-indigo-600" />
+                    Bấm nút Play để nghe bài nghe (có thể nghe lại nếu chưa rõ)
+                  </div>
+                  {section.audioUrl ? (
+                    <audio controls src={section.audioUrl} className="h-10 w-full" />
+                  ) : (
+                    section.listeningScript &&
+                    typeof window !== 'undefined' &&
+                    'speechSynthesis' in window && (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            window.speechSynthesis.cancel();
+                            const utter = new SpeechSynthesisUtterance(section.listeningScript);
+                            utter.lang = 'en-US';
+                            utter.rate = homework.level === 'elementary' ? 0.85 : 0.95;
+                            window.speechSynthesis.speak(utter);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-indigo-700"
+                        >
+                          <Volume2 className="h-4 w-4" /> Nghe bài đọc tiếng Anh
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => window.speechSynthesis.cancel()}
+                          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          Dừng đọc
+                        </button>
+                      </div>
+                    )
+                  )}
+
+                  {submission && section.listeningScript && (
+                    <div className="rounded-lg border border-indigo-100 bg-white p-3 text-xs leading-relaxed text-slate-700 whitespace-pre-line">
+                      <strong className="text-indigo-800">Lời thoại bài nghe (Tapescript):</strong>
+                      <div className="mt-1">{section.listeningScript}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {section.readingPassage && (
                 <div className="mt-3 rounded-xl border-l-4 border-indigo-400 bg-slate-50 p-4 text-sm leading-relaxed text-slate-800 whitespace-pre-line">
                   {section.readingPassage}
@@ -289,20 +343,23 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                       key={q.id}
                       className={`rounded-xl border p-4 ${
                         res
-                          ? res.isCorrect
-                            ? 'border-emerald-300 bg-emerald-50/40'
-                            : 'border-rose-300 bg-rose-50/40'
+                          ? res.isManualReview
+                            ? 'border-indigo-200 bg-indigo-50/30'
+                            : res.isCorrect
+                              ? 'border-emerald-300 bg-emerald-50/40'
+                              : 'border-rose-300 bg-rose-50/40'
                           : 'border-slate-200 bg-slate-50/40'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-slate-900">
+                        <p className="text-sm font-semibold text-slate-900 whitespace-pre-line">
                           <span className="mr-1.5 text-indigo-600">Câu {num}.</span>
                           {q.type === 'sentence_order' && q.words?.length
                             ? 'Sắp xếp các từ sau thành câu hoàn chỉnh:'
                             : q.prompt}
                         </p>
                         {res &&
+                          !res.isManualReview &&
                           (res.isCorrect ? (
                             <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
                           ) : (
@@ -310,8 +367,8 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                           ))}
                       </div>
 
-                      {/* Multiple Choice */}
-                      {q.type === 'multiple_choice' && q.options && (
+                      {/* Multiple Choice & Find Mistake */}
+                      {isChoiceQuestion(q) && q.options && (
                         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {q.options.map((opt, idx) => {
                             const cleanOpt = stripOptionPrefix(opt);
@@ -400,15 +457,31 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                         />
                       )}
 
+                      {/* Writing */}
+                      {q.type === 'writing' && (
+                        <textarea
+                          rows={4}
+                          disabled={Boolean(submission)}
+                          value={val}
+                          onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
+                          placeholder="Viết bài trả lời bằng tiếng Anh của em vào đây..."
+                          className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3.5 text-sm leading-relaxed focus:border-indigo-500 focus:outline-none"
+                        />
+                      )}
+
                       {/* Feedback after submit */}
                       {res && (
                         <div className="mt-3 rounded-lg bg-white/90 p-3 text-xs">
-                          <div className="font-semibold text-emerald-800">
-                            Đáp án đúng: {res.correctAnswer}
+                          <div className="font-semibold text-emerald-800 whitespace-pre-line">
+                            {res.isManualReview ? 'Bài viết mẫu tham khảo:' : 'Đáp án đúng:'}{' '}
+                            {res.correctAnswer}
                           </div>
                           {res.explanation && (
-                            <div className="mt-1 text-slate-600">
-                              <strong>Giải thích:</strong> {res.explanation}
+                            <div className="mt-1 text-slate-600 whitespace-pre-line">
+                              <strong>
+                                {res.isManualReview ? 'Gợi ý & tiêu chí:' : 'Giải thích:'}
+                              </strong>{' '}
+                              {res.explanation}
                             </div>
                           )}
                         </div>
