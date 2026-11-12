@@ -4,7 +4,6 @@ import {
   Check,
   Copy,
   Download,
-  ExternalLink,
   Eye,
   FileText,
   Globe,
@@ -35,7 +34,7 @@ import {
 } from '../utils/grading';
 import { extractClipboardImage, uploadQuestionImage } from '../utils/imageUpload';
 import { createId } from '../utils/promptBuilder';
-import { buildServerQuizUrl, buildStandaloneQuizUrl } from '../utils/shareCodec';
+import { buildServerQuizUrl } from '../utils/shareCodec';
 
 interface HomeworkEditorProps {
   homework: Homework;
@@ -228,15 +227,12 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
     }
   };
 
-  const copyLink = async (type: 'server' | 'standalone') => {
+  const copyLink = async () => {
     await onSave(draft);
     const scriptUrl = resolveGoogleScriptUrl();
-    const url =
-      type === 'server'
-        ? buildServerQuizUrl(draft.id, scriptUrl)
-        : buildStandaloneQuizUrl(draft);
+    const url = buildServerQuizUrl(draft.id, scriptUrl);
     await navigator.clipboard.writeText(url);
-    setCopiedKey(type);
+    setCopiedKey('server');
     setTimeout(() => setCopiedKey(null), 2200);
   };
 
@@ -1006,112 +1002,62 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Server / Google Sheet Short URL */}
-            {(() => {
-              const scriptUrl = resolveGoogleScriptUrl();
-              const isConnected = serverOnline || Boolean(scriptUrl);
-              const shortUrl = buildServerQuizUrl(draft.id, scriptUrl);
-              return (
-                <div
-                  className={`rounded-xl border p-4 ${
-                    isConnected
-                      ? 'border-emerald-200 bg-emerald-50/50'
-                      : 'border-slate-200 bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-slate-900">
-                      Link Ngắn (Khuyên dùng gửi Zalo)
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                        isConnected
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}
-                    >
-                      {scriptUrl
-                        ? 'Google Sheet • Ngắn gọn'
-                        : serverOnline
-                          ? 'Đang kết nối • Ngắn gọn'
-                          : 'Chưa nối Sheet/Server'}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-600">
+          {/* Server / Google Sheet Short URL */}
+          {(() => {
+            const scriptUrl = resolveGoogleScriptUrl();
+            const isConnected = serverOnline || Boolean(scriptUrl);
+            const shortUrl = buildServerQuizUrl(draft.id, scriptUrl);
+            return (
+              <div
+                className={`rounded-xl border p-4 ${
+                  isConnected
+                    ? 'border-emerald-200 bg-emerald-50/50'
+                    : 'border-slate-200 bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-slate-900">
+                    Link Ngắn (Gửi Zalo cho học sinh)
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                      isConnected
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
                     {scriptUrl
-                      ? 'Đề & điểm 100 học sinh tự động lưu vào Google Sheet của bạn. Link rất ngắn, copy gửi Zalo cực tiện.'
+                      ? 'Google Sheet • Ngắn gọn'
                       : serverOnline
-                        ? 'Đang dùng máy chủ cục bộ. Muốn gửi cho học sinh ngoài mạng qua Zalo, hãy dán URL Google Apps Script trong Cài đặt hoặc chạy trên domain/VPS.'
-                        : 'Vào Cài đặt (Thông tin giáo viên) dán Google Apps Script URL để lưu đề & thu điểm 100 học sinh vào Google Sheet miễn phí.'}
-                  </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <input
-                      readOnly
-                      value={shortUrl}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => copyLink('server')}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                    >
-                      {copiedKey === 'server' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copiedKey === 'server' ? 'Đã copy' : 'Copy'}
-                    </button>
-                  </div>
+                        ? 'Đang kết nối • Ngắn gọn'
+                        : 'Chưa nối Sheet/Server'}
+                  </span>
                 </div>
-              );
-            })()}
-
-            {/* Standalone Compressed Link */}
-            {(() => {
-              const standaloneUrl = buildStandaloneQuizUrl(draft);
-              const isTooLongForZalo = standaloneUrl.length > 2000;
-              return (
-                <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-indigo-950">
-                      Link Độc Lập (Không cần server)
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                        isTooLongForZalo
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-indigo-100 text-indigo-700'
-                      }`}
-                    >
-                      {standaloneUrl.length.toLocaleString()} ký tự
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-600">
-                    {isTooLongForZalo
-                      ? 'Đề nhiều câu nên link này khá dài, Zalo có thể cắt bớt khi gửi. Nếu dùng trên máy chủ/VPS hãy ưu tiên Link Ngắn bên cạnh.'
-                      : 'Toàn bộ câu hỏi được gói sẵn trong đường link. Học sinh bấm vào làm và xem điểm ngay.'}
-                  </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <input
-                      readOnly
-                      value={standaloneUrl}
-                      className="w-full rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-xs text-slate-700"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => copyLink('standalone')}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
-                    >
-                      {copiedKey === 'standalone' ? (
-                        <Check className="h-3.5 w-3.5" />
-                      ) : (
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      )}
-                      {copiedKey === 'standalone' ? 'Đã copy' : 'Copy'}
-                    </button>
-                  </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  {scriptUrl
+                    ? 'Đề & điểm 100 học sinh tự động lưu vào Google Sheet của bạn. Link rất ngắn, copy gửi Zalo cực tiện.'
+                    : serverOnline
+                      ? 'Đang dùng máy chủ cục bộ. Muốn gửi cho học sinh ngoài mạng qua Zalo, hãy dán URL Google Apps Script trong Cài đặt hoặc chạy trên domain/VPS.'
+                      : 'Vào Cài đặt (Thông tin giáo viên) dán Google Apps Script URL để lưu đề & thu điểm 100 học sinh vào Google Sheet miễn phí.'}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={shortUrl}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={copyLink}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                  >
+                    {copiedKey === 'server' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedKey === 'server' ? 'Đã copy' : 'Copy'}
+                  </button>
                 </div>
-              );
-            })()}
-          </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
