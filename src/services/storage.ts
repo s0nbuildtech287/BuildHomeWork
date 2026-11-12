@@ -1,6 +1,7 @@
 import { AppSettings, GeneratorConfig, Homework, ReferenceSource, StudentSubmission, SubjectId } from '../types';
 import { getDefaultCountsForSubject, getSubjectDefinition } from '../config/subjects';
 import { AttachedMaterial } from '../utils/fileExtractor';
+import { fetchSubmissionsFromSheet, saveHomeworkToSheet } from './googleSheet';
 
 const HOMEWORKS_KEY = 'bhw_homeworks_v1';
 const SETTINGS_KEY = 'bhw_settings_v1';
@@ -120,6 +121,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   headerRight: 'T-CLASS EDUCATION - 0978386622',
   footerLeft: 'T-CLASS EDUCATION - Số nhà 9,12,14-16 Ngõ 71 Khu Dịch vụ 3, Văn Phú, Hà Đông, HN',
   headerFooterColor: '7075B8',
+  googleScriptUrl:
+    'https://script.google.com/macros/s/AKfycbxz_bSM136QVuexjpy3DUWKnIkE9xOboKO0zwZF-VjDi9zVatQG7WlwivNkN5dNp5Q6AA/exec',
 };
 
 export function loadSettings(): AppSettings {
@@ -129,6 +132,9 @@ export function loadSettings(): AppSettings {
     const merged = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
     if (merged.geminiModel === 'gemini-2.5-flash' || merged.geminiModel === 'gemini-2.0-flash') {
       merged.geminiModel = 'gemini-3.8-flash';
+    }
+    if (!merged.googleScriptUrl) {
+      merged.googleScriptUrl = DEFAULT_SETTINGS.googleScriptUrl;
     }
     return merged;
   } catch {
@@ -198,6 +204,9 @@ export async function upsertHomework(hw: Homework): Promise<Homework> {
     idx >= 0 ? local.map((x) => (x.id === updated.id ? updated : x)) : [updated, ...local];
   saveLocalHomeworks(nextLocal);
 
+  // Best-effort sync to Google Sheet if configured
+  void saveHomeworkToSheet(updated);
+
   try {
     const res = await fetch('/api/homeworks', {
       method: 'POST',
@@ -225,20 +234,37 @@ export async function removeHomework(id: string): Promise<void> {
 }
 
 export async function fetchSubmissions(homeworkId: string): Promise<StudentSubmission[]> {
+  const byId = new Map<string, StudentSubmission>();
+
+  const sheetList = await fetchSubmissionsFromSheet(homeworkId);
+  for (const s of sheetList) {
+    if (s && s.id) byId.set(s.id, s);
+  }
+
   try {
     const res = await fetch(`/api/submissions/${encodeURIComponent(homeworkId)}`);
-    if (!res.ok) throw new Error('Error');
-    const data = await res.json();
-    return Array.isArray(data.submissions) ? data.submissions : [];
+    if (res.ok) {
+      const data = await res.json();
+      const serverList = Array.isArray(data.submissions) ? (data.submissions as StudentSubmission[]) : [];
+      for (const s of serverList) {
+        if (s && s.id && !byId.has(s.id)) byId.set(s.id, s);
+      }
+    }
   } catch {
     try {
       const raw = localStorage.getItem(SUBMISSIONS_KEY);
       const list: StudentSubmission[] = raw ? JSON.parse(raw) : [];
-      return list.filter((s) => s.homeworkId === homeworkId);
+      for (const s of list.filter((x) => x.homeworkId === homeworkId)) {
+        if (s && s.id && !byId.has(s.id)) byId.set(s.id, s);
+      }
     } catch {
-      return [];
+      // ignore
     }
   }
+
+  return Array.from(byId.values()).sort(
+    (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+  );
 }
 
 export function saveLocalSubmission(sub: StudentSubmission): void {

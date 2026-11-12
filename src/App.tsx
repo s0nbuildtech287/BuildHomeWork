@@ -32,7 +32,7 @@ import { createId } from './utils/promptBuilder';
 type TeacherPage = 'generate' | 'library' | 'sources' | 'editor' | 'print' | 'previewQuiz';
 
 type AppRoute =
-  | { kind: 'quiz'; quizId?: string; encodedData?: string }
+  | { kind: 'quiz'; quizId?: string; encodedData?: string; gsParam?: string }
   | { kind: 'intro' }
   | { kind: 'create'; subject: SubjectId }
   | { kind: 'library' }
@@ -46,14 +46,16 @@ function parseAppRoute(): AppRoute {
 
   if (hash.startsWith('#/quiz')) {
     const queryIdx = hash.indexOf('?');
+    let gsParam: string | undefined;
     if (queryIdx >= 0) {
       const params = new URLSearchParams(hash.slice(queryIdx + 1));
+      gsParam = params.get('gs') || undefined;
       const data = params.get('data');
-      if (data) return { kind: 'quiz', encodedData: data };
+      if (data) return { kind: 'quiz', encodedData: data, gsParam };
     }
     const match = hash.match(/^#\/quiz\/([^?]+)/);
     if (match && match[1]) {
-      return { kind: 'quiz', quizId: decodeURIComponent(match[1]) };
+      return { kind: 'quiz', quizId: decodeURIComponent(match[1]), gsParam };
     }
   }
 
@@ -225,6 +227,7 @@ export function App() {
       <OnlineQuizView
         quizId={quizRoute.quizId}
         encodedData={quizRoute.encodedData}
+        gsParam={quizRoute.gsParam}
       />
     );
   }

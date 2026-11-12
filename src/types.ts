@@ -113,6 +113,7 @@ export interface AppSettings {
   headerRight?: string;
   footerLeft?: string;
   headerFooterColor?: string;
+  googleScriptUrl?: string;
 }
 
 export interface GradedQuestionResult {

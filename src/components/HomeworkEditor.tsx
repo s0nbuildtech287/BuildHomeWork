@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { MathText } from './MathText';
 import { generateTtsAudio } from '../services/gemini';
+import { resolveGoogleScriptUrl } from '../services/googleSheet';
 import { fetchSubmissions } from '../services/storage';
 import { Homework, HomeworkSection, Question, StudentSubmission } from '../types';
 import { DocxExportMode, exportHomeworkToDocx } from '../utils/docxExport';
@@ -229,8 +230,11 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
 
   const copyLink = async (type: 'server' | 'standalone') => {
     await onSave(draft);
+    const scriptUrl = resolveGoogleScriptUrl();
     const url =
-      type === 'server' ? buildServerQuizUrl(draft.id) : buildStandaloneQuizUrl(draft);
+      type === 'server'
+        ? buildServerQuizUrl(draft.id, scriptUrl)
+        : buildStandaloneQuizUrl(draft);
     await navigator.clipboard.writeText(url);
     setCopiedKey(type);
     setTimeout(() => setCopiedKey(null), 2200);
@@ -1003,77 +1007,110 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Standalone Compressed Link (works everywhere including Vercel & Zalo) */}
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-indigo-950">
-                  Link Độc Lập (Gửi qua Zalo cực tiện)
-                </span>
-                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
-                  Khuyên dùng • Mở là làm ngay
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-slate-600">
-                Toàn bộ câu hỏi được gói sẵn trong đường link. Chỉ cần copy link này gửi vào nhóm Zalo lớp là học sinh bấm vào làm và xem điểm ngay.
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <input
-                  readOnly
-                  value={buildStandaloneQuizUrl(draft)}
-                  className="w-full rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-xs text-slate-700"
-                />
-                <button
-                  type="button"
-                  onClick={() => copyLink('standalone')}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
-                >
-                  {copiedKey === 'standalone' ? (
-                    <Check className="h-3.5 w-3.5" />
-                  ) : (
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  )}
-                  {copiedKey === 'standalone' ? 'Đã copy' : 'Copy'}
-                </button>
-              </div>
-            </div>
-
-            {/* Server ID Link */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-900">
-                  Link ngắn (Lưu điểm về máy Giáo viên)
-                </span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                    serverOnline
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-amber-100 text-amber-700'
+            {/* Server / Google Sheet Short URL */}
+            {(() => {
+              const scriptUrl = resolveGoogleScriptUrl();
+              const isConnected = serverOnline || Boolean(scriptUrl);
+              const shortUrl = buildServerQuizUrl(draft.id, scriptUrl);
+              return (
+                <div
+                  className={`rounded-xl border p-4 ${
+                    isConnected
+                      ? 'border-emerald-200 bg-emerald-50/50'
+                      : 'border-slate-200 bg-slate-50'
                   }`}
                 >
-                  {serverOnline ? 'Đang kết nối' : 'Cần máy chủ riêng'}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-slate-600">
-                {serverOnline
-                  ? 'Dùng khi học sinh học chung Wi-Fi hoặc chạy trên máy chủ có lưu trữ. Điểm sẽ tự lưu vào tab Kết quả học sinh.'
-                  : 'Khi dùng bản web trên Vercel, dữ liệu chỉ lưu trên trình duyệt của bạn — hãy copy Link Độc Lập bên cạnh để gửi học sinh.'}
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <input
-                  readOnly
-                  value={buildServerQuizUrl(draft.id)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700"
-                />
-                <button
-                  type="button"
-                  onClick={() => copyLink('server')}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                >
-                  {copiedKey === 'server' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copiedKey === 'server' ? 'Đã copy' : 'Copy'}
-                </button>
-              </div>
-            </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-slate-900">
+                      Link Ngắn (Khuyên dùng gửi Zalo)
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        isConnected
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {scriptUrl
+                        ? 'Google Sheet • Ngắn gọn'
+                        : serverOnline
+                          ? 'Đang kết nối • Ngắn gọn'
+                          : 'Chưa nối Sheet/Server'}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">
+                    {scriptUrl
+                      ? 'Đề & điểm 100 học sinh tự động lưu vào Google Sheet của bạn. Link rất ngắn, copy gửi Zalo cực tiện.'
+                      : serverOnline
+                        ? 'Đang dùng máy chủ cục bộ. Muốn gửi cho học sinh ngoài mạng qua Zalo, hãy dán URL Google Apps Script trong Cài đặt hoặc chạy trên domain/VPS.'
+                        : 'Vào Cài đặt (Thông tin giáo viên) dán Google Apps Script URL để lưu đề & thu điểm 100 học sinh vào Google Sheet miễn phí.'}
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      readOnly
+                      value={shortUrl}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyLink('server')}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                    >
+                      {copiedKey === 'server' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedKey === 'server' ? 'Đã copy' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Standalone Compressed Link */}
+            {(() => {
+              const standaloneUrl = buildStandaloneQuizUrl(draft);
+              const isTooLongForZalo = standaloneUrl.length > 2000;
+              return (
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-indigo-950">
+                      Link Độc Lập (Không cần server)
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        isTooLongForZalo
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-indigo-100 text-indigo-700'
+                      }`}
+                    >
+                      {standaloneUrl.length.toLocaleString()} ký tự
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">
+                    {isTooLongForZalo
+                      ? 'Đề nhiều câu nên link này khá dài, Zalo có thể cắt bớt khi gửi. Nếu dùng trên máy chủ/VPS hãy ưu tiên Link Ngắn bên cạnh.'
+                      : 'Toàn bộ câu hỏi được gói sẵn trong đường link. Học sinh bấm vào làm và xem điểm ngay.'}
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      readOnly
+                      value={standaloneUrl}
+                      className="w-full rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyLink('standalone')}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+                    >
+                      {copiedKey === 'standalone' ? (
+                        <Check className="h-3.5 w-3.5" />
+                      ) : (
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      )}
+                      {copiedKey === 'standalone' ? 'Đã copy' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

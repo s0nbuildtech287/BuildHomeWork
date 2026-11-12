@@ -11,6 +11,11 @@ import {
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { MathText } from './MathText';
+import {
+  fetchHomeworkFromSheet,
+  resolveGoogleScriptUrl,
+  submitResultToSheet,
+} from '../services/googleSheet';
 import { saveLocalSubmission } from '../services/storage';
 import { GradedQuestionResult, Homework, StudentSubmission } from '../types';
 import { gradeHomework, isChoiceQuestion, isEssayQuestion, stripOptionPrefix } from '../utils/grading';
@@ -20,6 +25,7 @@ import { decodeHomeworkFromHash } from '../utils/shareCodec';
 interface OnlineQuizViewProps {
   quizId?: string;
   encodedData?: string;
+  gsParam?: string;
   previewHomework?: Homework | null;
   onExitPreview?: () => void;
 }
@@ -27,6 +33,7 @@ interface OnlineQuizViewProps {
 export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
   quizId,
   encodedData,
+  gsParam,
   previewHomework,
   onExitPreview,
 }) => {
@@ -63,19 +70,34 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
 
     if (quizId) {
       setLoading(true);
-      fetch(`/api/quiz/${encodeURIComponent(quizId)}`)
-        .then(async (res) => {
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Không tải được bài tập');
-          setHomework(data.homework);
-          setIsServerQuiz(true);
-        })
-        .catch((err) => {
-          setError(err instanceof Error ? err.message : 'Không tìm thấy bài tập.');
-        })
-        .finally(() => setLoading(false));
+      (async () => {
+        try {
+          const res = await fetch(`/api/quiz/${encodeURIComponent(quizId)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.homework) {
+              setHomework(data.homework);
+              setIsServerQuiz(true);
+              return;
+            }
+          }
+        } catch {
+          // Server not available, fallback to Google Sheet below
+        }
+
+        if (resolveGoogleScriptUrl(gsParam)) {
+          const sheetHw = await fetchHomeworkFromSheet(quizId, gsParam);
+          if (sheetHw) {
+            setHomework(sheetHw);
+            setIsServerQuiz(false);
+            return;
+          }
+        }
+
+        setError('Không tìm thấy bài tập hoặc máy chủ chưa kết nối.');
+      })().finally(() => setLoading(false));
     }
-  }, [quizId, encodedData, previewHomework]);
+  }, [quizId, encodedData, gsParam, previewHomework]);
 
   const handleSelectWord = (qId: string, word: string) => {
     if (submission) return;
@@ -108,6 +130,9 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
         if (!res.ok) throw new Error(data.error || 'Lỗi nộp bài');
         if (data.homeworkWithKeys) setHomework(data.homeworkWithKeys);
         setSubmission(data.submission);
+        if (resolveGoogleScriptUrl(gsParam)) {
+          void submitResultToSheet(data.submission, homework.title, gsParam);
+        }
       } else {
         const graded = gradeHomework(homework, answers);
         const sub: StudentSubmission = {
@@ -122,6 +147,9 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
           results: graded.results,
         };
         saveLocalSubmission(sub);
+        if (resolveGoogleScriptUrl(gsParam)) {
+          await submitResultToSheet(sub, homework.title, gsParam);
+        }
         setSubmission(sub);
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
