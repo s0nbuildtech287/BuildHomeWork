@@ -83,6 +83,8 @@ export interface SectionCountConfig {
   sign_notice: number;
   removed_sentences: number;
   closest_meaning: number;
+  vocab_vi_to_en: number;
+  vocab_en_to_vi: number;
   true_false_group: number;
   short_answer: number;
   essay: number;
