@@ -4,8 +4,10 @@ import {
   HomeworkSection,
   Question,
   QuestionType,
+  SubjectId,
   TargetLevel,
 } from '../types';
+import { getSubjectDefinition } from '../config/subjects';
 import { stripOptionPrefix } from './grading';
 
 const LEVEL_DESCRIPTIONS: Record<TargetLevel, string> = {
@@ -38,6 +40,10 @@ export function buildHomeworkPrompt(
   textDocuments: TextDocumentInput[] = [],
   hasAttachedAudio = false
 ): string {
+  const subject = config.subject || 'english';
+  if (subject !== 'english') {
+    return buildSubjectHomeworkPrompt(config, hasAttachedBinaryFiles, textDocuments);
+  }
   const requestedParts: string[] = [];
 
   if (config.counts.multiple_choice > 0) {
@@ -169,6 +175,136 @@ LƯU Ý QUAN TRỌNG:
 5. Đảm bảo JSON hợp lệ hoàn toàn (escape dấu ngoặc kép nếu có trong chuỗi).`;
 }
 
+function buildSubjectHomeworkPrompt(
+  config: GeneratorConfig,
+  hasAttachedBinaryFiles = false,
+  textDocuments: TextDocumentInput[] = []
+): string {
+  const subjectDef = getSubjectDefinition(config.subject);
+  const levelInfo = subjectDef.levels.find((l) => l.value === config.level);
+  const requestedParts: string[] = [];
+
+  if (config.counts.multiple_choice > 0) {
+    requestedParts.push(
+      `- "multiple_choice": ${config.counts.multiple_choice} câu trắc nghiệm 4 lựa chọn (options gồm đúng 4 chuỗi không kèm tiền tố A./B./C./D., correctAnswer ghi chính xác nội dung đáp án đúng).`
+    );
+  }
+  if (config.counts.true_false_group > 0) {
+    requestedParts.push(
+      `- "true_false_group": ${config.counts.true_false_group} câu Đúng/Sai chuẩn cấu trúc mới (dùng type="short_answer"). Mỗi câu gồm 1 dẫn đề và đúng 4 mệnh đề a), b), c), d) xuống dòng rõ ràng trong "prompt"; "hint" ghi "Nhập 4 chữ Đ hoặc S (VD: Đ-S-Đ-Đ)"; "correctAnswer" ghi theo mẫu "Đ-S-Đ-Đ | Đúng - Sai - Đúng - Đúng"; "explanation" giải thích ngắn gọn từng ý a, b, c, d.`
+    );
+  }
+  if (config.counts.short_answer > 0) {
+    requestedParts.push(
+      `- "short_answer": ${config.counts.short_answer} câu trả lời ngắn / điền đáp số (dùng type="short_answer"). Học sinh tự tính hoặc trả lời ngắn gọn; "correctAnswer" ghi các biến thể chấp nhận được cách nhau bởi " | " (VD: "12 | 12 cm" hoặc "0.5 | 0,5"); "hint" gợi ý đơn vị tính nếu có.`
+    );
+  }
+  if (config.counts.fill_blank > 0) {
+    requestedParts.push(
+      `- "fill_blank": ${config.counts.fill_blank} câu điền khuyết kiến thức (dùng ______ cho chỗ trống, correctAnswer ghi từ/cụm từ cần điền).`
+    );
+  }
+  if (config.counts.reading_questions > 0) {
+    requestedParts.push(
+      `- "reading_questions": 1 phần đọc hiểu ngữ liệu / tư liệu môn ${subjectDef.name} (ghi ngữ liệu vào "readingPassage") kèm ${config.counts.reading_questions} câu hỏi (có thể dùng type="multiple_choice" hoặc "short_answer" hoặc "essay").`
+    );
+  }
+  if (config.counts.essay > 0) {
+    requestedParts.push(
+      `- "essay": ${config.counts.essay} câu tự luận chi tiết (dùng type="essay"). "correctAnswer" ghi bài giải mẫu / đáp án chuẩn; "explanation" ghi hướng dẫn các bước làm hoặc thang điểm chi tiết.`
+    );
+  }
+  if (config.counts.writing > 0) {
+    requestedParts.push(
+      `- "writing": ${config.counts.writing} câu viết đoạn văn / bài văn nghị luận (dùng type="writing"). "correctAnswer" ghi dàn ý chi tiết hoặc bài mẫu tham khảo; "explanation" ghi thang điểm chấm bài (rubric).`
+    );
+  }
+
+  if (requestedParts.length === 0) {
+    requestedParts.push(
+      `- "multiple_choice": 6 câu trắc nghiệm 4 lựa chọn.`,
+      `- "short_answer": 3 câu trả lời ngắn.`
+    );
+  }
+
+  const attachedNotice = hasAttachedBinaryFiles
+    ? `\n- TÀI LIỆU ĐÍNH KÈM (ẢNH / PDF): Hãy đọc kỹ nội dung trong tài liệu đính kèm và bám sát kiến thức, dạng bài trong đó để thiết kế đề phù hợp.\n`
+    : '';
+
+  const textDocsSection =
+    textDocuments.length > 0
+      ? `\nNỘI DUNG TÀI LIỆU GIÁO VIÊN ĐÍNH KÈM:\n${textDocuments
+          .map((d, i) => `--- Tài liệu ${i + 1}: ${d.name} ---\n${d.content.slice(0, 12000)}`)
+          .join('\n\n')}\n`
+      : '';
+
+  const stemRule = subjectDef.supportsStemOptions
+    ? config.useLatexFormulas !== false
+      ? `- KÝ HIỆU TOÁN / KHOA HỌC: Bắt buộc dùng chuẩn LaTeX bọc trong $...$ (công thức cùng dòng) hoặc $$...$$ (công thức riêng dòng), ví dụ: $\\frac{a}{b}$, $x^2 - 4x + 3 = 0$, $\\vec{F}$, $H_2SO_4$, $2H_2 + O_2 \\xrightarrow{t^o} 2H_2O$. Lưu ý escape dấu backslash trong JSON (\\\\frac, \\\\vec, \\\\rightarrow).`
+      : `- Viết công thức rõ ràng bằng ký tự phổ thông (VD: x^2, H2SO4, cm/s).`
+    : `- Ngôn ngữ tiếng Việt chuẩn mực, rõ ràng, phù hợp bộ môn ${subjectDef.name}.`;
+
+  const stepByStepRule = subjectDef.supportsStemOptions
+    ? config.includeStepByStep !== false
+      ? `- LỜI GIẢI CHI TIẾT: Phần "explanation" trình bày rõ các bước biến đổi / công thức áp dụng để học sinh tự đối chiếu sau khi nộp bài.`
+      : `- Giải thích ngắn gọn, đi thẳng vào công thức/đáp án đúng.`
+    : `- Phần "explanation" nêu rõ căn cứ kiến thức / dẫn chứng / thang điểm chấm bài.`;
+
+  return `Bạn là giáo viên môn ${subjectDef.name} giàu kinh nghiệm tại Việt Nam, chuyên thiết kế phiếu bài tập và đề kiểm tra chuẩn chương trình GDPT 2018.
+Hãy tạo một bộ bài tập hoàn chỉnh bằng TIẾNG VIỆT cho môn ${subjectDef.name} theo cấu hình sau:
+
+THÔNG TIN BÀI TẬP:
+- Môn học: ${subjectDef.name}
+- Cấp học / Đối tượng: ${levelInfo ? `${levelInfo.label} (${levelInfo.desc})` : 'THCS / THPT'}
+- Lớp / Khối: ${config.gradeOrClass || subjectDef.defaultGrade}
+- Chủ đề / Bài học: ${config.topic || `Ôn tập kiến thức trọng tâm ${subjectDef.name}`}
+- ${subjectDef.focus1Label}: ${config.grammarFocus || 'Theo nội dung bài học'}
+- ${subjectDef.focus2Label}: ${config.vocabularyFocus || 'Phù hợp trình độ'}
+- ${subjectDef.mistakesLabel}: ${config.studentMistakes || 'Không có ghi chú thêm'}
+- Mức độ: ${DIFFICULTY_LABELS[config.difficulty]}
+${config.extraInstructions ? `- YÊU CẦU RIÊNG CỦA GIÁO VIÊN: ${config.extraInstructions}` : ''}
+${attachedNotice}${textDocsSection}
+CẤU TRÚC CÁC PHẦN CẦN TẠO:
+${requestedParts.join('\n')}
+
+QUY TẮC CHUYÊN MÔN:
+${stemRule}
+${stepByStepRule}
+
+YÊU CẦU ĐỊNH DẠNG ĐẦU RA (BẮT BUỘC):
+Chỉ trả về DUY NHẤT một JSON object hợp lệ (không giải thích ngoài lề) theo đúng schema sau:
+{
+  "title": "Phiếu Bài Tập ${subjectDef.name} - ...",
+  "subtitle": "Chủ đề: ...",
+  "topicSummary": "Tóm tắt ngắn gọn nội dung trọng tâm",
+  "estimatedMinutes": 25,
+  "sections": [
+    {
+      "title": "Phần I. Trắc nghiệm khách quan",
+      "instruction": "Chọn đáp án đúng nhất trong các phương án A, B, C, D.",
+      "type": "multiple_choice",
+      "readingPassage": "",
+      "questions": [
+        {
+          "type": "multiple_choice",
+          "prompt": "Nội dung câu hỏi...",
+          "options": ["Phương án A", "Phương án B", "Phương án C", "Phương án D"],
+          "hint": "",
+          "correctAnswer": "Phương án A",
+          "explanation": "Giải thích chi tiết..."
+        }
+      ]
+    }
+  ]
+}
+
+LƯU Ý QUAN TRỌNG:
+1. Tạo ĐÚNG VÀ ĐỦ số lượng câu hỏi đã yêu cầu ở từng phần.
+2. Field "type" bắt buộc chọn 1 trong các giá trị: "multiple_choice", "fill_blank", "short_answer", "essay", "writing".
+3. Nếu dùng công thức LaTeX trong chuỗi JSON, nhớ escape dấu gạch chéo ngược thành hai dấu (ví dụ: "\\\\frac{1}{2}", "\\\\sqrt{x}").
+4. Đảm bảo JSON hợp lệ hoàn toàn.`;
+}
+
 function normalizeQuestionType(raw: unknown, fallback: QuestionType): QuestionType {
   const allowed: QuestionType[] = [
     'multiple_choice',
@@ -178,6 +314,8 @@ function normalizeQuestionType(raw: unknown, fallback: QuestionType): QuestionTy
     'rewrite',
     'find_mistake',
     'writing',
+    'short_answer',
+    'essay',
   ];
   if (typeof raw === 'string' && allowed.includes(raw as QuestionType)) {
     return raw as QuestionType;
@@ -191,6 +329,7 @@ function normalizeQuestionType(raw: unknown, fallback: QuestionType): QuestionTy
 export function parseAiHomeworkResponse(
   rawText: string,
   defaults: {
+    subject?: SubjectId;
     level: TargetLevel;
     gradeOrClass?: string;
     teacherName?: string;
@@ -302,16 +441,19 @@ export function parseAiHomeworkResponse(
     throw new Error('Không tìm thấy câu hỏi hợp lệ nào trong kết quả AI.');
   }
 
+  const subject = defaults.subject || 'english';
+  const subjectName = getSubjectDefinition(subject).name;
   const now = new Date().toISOString();
   return {
     id: createId('hw'),
-    title: String(parsed.title ?? 'English Homework').trim(),
+    subject,
+    title: String(parsed.title ?? `Bài tập ${subjectName}`).trim(),
     subtitle: parsed.subtitle ? String(parsed.subtitle).trim() : undefined,
     level: defaults.level,
     gradeOrClass: defaults.gradeOrClass || undefined,
     teacherName: defaults.teacherName || undefined,
     centerName: defaults.centerName || undefined,
-    topicSummary: String(parsed.topicSummary ?? parsed.subtitle ?? 'Bài tập tiếng Anh').trim(),
+    topicSummary: String(parsed.topicSummary ?? parsed.subtitle ?? `Bài tập môn ${subjectName}`).trim(),
     estimatedMinutes:
       typeof parsed.estimatedMinutes === 'number' && parsed.estimatedMinutes > 0
         ? parsed.estimatedMinutes

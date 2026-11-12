@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Printer } from 'lucide-react';
+import { MathText } from './MathText';
 import { Homework } from '../types';
-import { isChoiceQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from '../utils/grading';
+import { isChoiceQuestion, isEssayQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from '../utils/grading';
 
 interface PrintWorksheetProps {
   homework: Homework;
@@ -156,7 +157,7 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                         </div>
                       ) : (
                         <p className="whitespace-pre-line">
-                          <strong>{qNum}.</strong> {q.prompt}
+                          <strong>{qNum}.</strong> <MathText text={q.prompt} />
                         </p>
                       )}
 
@@ -175,7 +176,7 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                           {q.options.map((opt, idx) => (
                             <span key={idx}>
                               <strong>{String.fromCharCode(65 + idx)}.</strong>{' '}
-                              {stripOptionPrefix(opt)}
+                              <MathText text={stripOptionPrefix(opt)} />
                             </span>
                           ))}
                         </div>
@@ -187,7 +188,7 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                         </p>
                       )}
 
-                      {q.type === 'writing' && (
+                      {isEssayQuestion(q) && (
                         <div className="mt-2 space-y-2 pl-5 text-slate-400">
                           <p>................................................................................................................</p>
                           <p>................................................................................................................</p>
@@ -213,9 +214,14 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
               {answerSummary.map((item) => (
                 <div key={item.num} className="avoid-break">
                   <strong>Câu {item.num}:</strong>{' '}
-                  <span className="font-semibold text-emerald-800 whitespace-pre-line">{item.answer}</span>
+                  <span className="font-semibold text-emerald-800 whitespace-pre-line">
+                    <MathText text={item.answer} />
+                  </span>
                   {mode === 'teacher' && item.explanation && (
-                    <span className="text-slate-600"> — {item.explanation}</span>
+                    <span className="text-slate-600">
+                      {' '}
+                      — <MathText text={item.explanation} />
+                    </span>
                   )}
                 </div>
               ))}

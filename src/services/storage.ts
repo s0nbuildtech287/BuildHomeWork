@@ -1,33 +1,33 @@
-import { AppSettings, GeneratorConfig, Homework, StudentSubmission } from '../types';
+import { AppSettings, GeneratorConfig, Homework, StudentSubmission, SubjectId } from '../types';
+import { getDefaultCountsForSubject, getSubjectDefinition } from '../config/subjects';
 import { AttachedMaterial } from '../utils/fileExtractor';
 
 const HOMEWORKS_KEY = 'bhw_homeworks_v1';
 const SETTINGS_KEY = 'bhw_settings_v1';
 const SUBMISSIONS_KEY = 'bhw_submissions_v1';
 const GENERATOR_DRAFT_KEY = 'bhw_generator_draft_v1';
+const SUBJECT_DRAFTS_KEY = 'bhw_subject_drafts_v1';
 
-export const DEFAULT_GENERATOR_CONFIG: GeneratorConfig = {
-  level: 'secondary',
-  gradeOrClass: 'Lớp 7',
-  topic: '',
-  grammarFocus: '',
-  vocabularyFocus: '',
-  studentMistakes: '',
-  extraInstructions: '',
-  listeningStyle: 'multiple_choice',
-  difficulty: 'medium',
-  counts: {
-    multiple_choice: 6,
-    fill_blank: 4,
-    word_form: 3,
-    sentence_order: 0,
-    rewrite: 3,
-    reading_questions: 4,
-    find_mistake: 0,
-    listening_questions: 0,
-    writing: 0,
-  },
-};
+export function createDefaultConfigForSubject(subject: SubjectId = 'english'): GeneratorConfig {
+  const def = getSubjectDefinition(subject);
+  return {
+    subject,
+    level: 'secondary',
+    gradeOrClass: def.defaultGrade,
+    topic: '',
+    grammarFocus: '',
+    vocabularyFocus: '',
+    studentMistakes: '',
+    extraInstructions: '',
+    listeningStyle: 'multiple_choice',
+    includeStepByStep: true,
+    useLatexFormulas: def.supportsStemOptions,
+    difficulty: 'medium',
+    counts: getDefaultCountsForSubject(subject),
+  };
+}
+
+export const DEFAULT_GENERATOR_CONFIG: GeneratorConfig = createDefaultConfigForSubject('english');
 
 export interface SavedGeneratorDraft {
   config: GeneratorConfig;
@@ -72,8 +72,35 @@ export function saveGeneratorDraft(
       GENERATOR_DRAFT_KEY,
       JSON.stringify({ config, aiMode, textMaterials })
     );
+    // Also persist per-subject config so switching subjects in the sidebar preserves each form
+    const rawMap = localStorage.getItem(SUBJECT_DRAFTS_KEY);
+    const map = rawMap ? JSON.parse(rawMap) : {};
+    map[config.subject || 'english'] = config;
+    localStorage.setItem(SUBJECT_DRAFTS_KEY, JSON.stringify(map));
   } catch {
     // ignore storage quota errors
+  }
+}
+
+export function loadSubjectConfig(subject: SubjectId): GeneratorConfig {
+  const base = createDefaultConfigForSubject(subject);
+  try {
+    const rawMap = localStorage.getItem(SUBJECT_DRAFTS_KEY);
+    if (!rawMap) return base;
+    const map = JSON.parse(rawMap);
+    const saved = map?.[subject];
+    if (!saved) return base;
+    return {
+      ...base,
+      ...saved,
+      subject,
+      counts: {
+        ...base.counts,
+        ...(saved.counts || {}),
+      },
+    };
+  } catch {
+    return base;
   }
 }
 

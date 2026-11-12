@@ -10,9 +10,10 @@ import {
   XCircle,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
+import { MathText } from './MathText';
 import { saveLocalSubmission } from '../services/storage';
 import { GradedQuestionResult, Homework, StudentSubmission } from '../types';
-import { gradeHomework, isChoiceQuestion, stripOptionPrefix } from '../utils/grading';
+import { gradeHomework, isChoiceQuestion, isEssayQuestion, stripOptionPrefix } from '../utils/grading';
 import { createId } from '../utils/promptBuilder';
 import { decodeHomeworkFromHash } from '../utils/shareCodec';
 
@@ -383,9 +384,11 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-semibold text-slate-900 whitespace-pre-line">
                           <span className="mr-1.5 text-indigo-600">Câu {num}.</span>
-                          {q.type === 'sentence_order' && q.words?.length
-                            ? 'Sắp xếp các từ sau thành câu hoàn chỉnh:'
-                            : q.prompt}
+                          {q.type === 'sentence_order' && q.words?.length ? (
+                            'Sắp xếp các từ sau thành câu hoàn chỉnh:'
+                          ) : (
+                            <MathText text={q.prompt} />
+                          )}
                         </p>
                         {res &&
                           !res.isManualReview &&
@@ -434,7 +437,7 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                                 >
                                   {String.fromCharCode(65 + idx)}
                                 </span>
-                                <span>{cleanOpt}</span>
+                                <MathText text={cleanOpt} />
                               </button>
                             );
                           })}
@@ -483,10 +486,11 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                         </div>
                       )}
 
-                      {/* Fill Blank / Word Form / Rewrite */}
+                      {/* Fill Blank / Word Form / Rewrite / Short Answer */}
                       {(q.type === 'fill_blank' ||
                         q.type === 'word_form' ||
-                        q.type === 'rewrite') && (
+                        q.type === 'rewrite' ||
+                        q.type === 'short_answer') && (
                         <div className="mt-3 space-y-2">
                           {q.type === 'fill_blank' &&
                             section.wordBank &&
@@ -527,14 +531,14 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                         </div>
                       )}
 
-                      {/* Writing */}
-                      {q.type === 'writing' && (
+                      {/* Writing / Essay */}
+                      {isEssayQuestion(q) && (
                         <textarea
                           rows={4}
                           disabled={Boolean(submission)}
                           value={val}
                           onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
-                          placeholder="Viết bài trả lời bằng tiếng Anh của em vào đây..."
+                          placeholder="Viết bài trả lời của em vào đây..."
                           className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3.5 text-sm leading-relaxed focus:border-indigo-500 focus:outline-none"
                         />
                       )}
@@ -543,15 +547,15 @@ export const OnlineQuizView: React.FC<OnlineQuizViewProps> = ({
                       {res && (
                         <div className="mt-3 rounded-lg bg-white/90 p-3 text-xs">
                           <div className="font-semibold text-emerald-800 whitespace-pre-line">
-                            {res.isManualReview ? 'Bài viết mẫu tham khảo:' : 'Đáp án đúng:'}{' '}
-                            {res.correctAnswer}
+                            {res.isManualReview ? 'Bài mẫu / Đáp án gợi ý:' : 'Đáp án đúng:'}{' '}
+                            <MathText text={res.correctAnswer} />
                           </div>
                           {res.explanation && (
                             <div className="mt-1 text-slate-600 whitespace-pre-line">
                               <strong>
                                 {res.isManualReview ? 'Gợi ý & tiêu chí:' : 'Giải thích:'}
                               </strong>{' '}
-                              {res.explanation}
+                              <MathText text={res.explanation} />
                             </div>
                           )}
                         </div>

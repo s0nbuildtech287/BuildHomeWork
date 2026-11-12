@@ -15,7 +15,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Homework } from '../types';
-import { isChoiceQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from './grading';
+import { isChoiceQuestion, isEssayQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from './grading';
 
 export type DocxExportMode = 'student' | 'student_with_key' | 'teacher';
 
@@ -395,7 +395,7 @@ export async function exportHomeworkToDocx(
         );
       }
 
-      if (q.type === 'writing') {
+      if (isEssayQuestion(q)) {
         for (let lineIdx = 0; lineIdx < 4; lineIdx++) {
           children.push(
             new Paragraph({

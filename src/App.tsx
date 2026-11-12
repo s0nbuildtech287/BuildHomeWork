@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FolderHeart, Settings, Sparkles } from 'lucide-react';
+import { Menu, Settings } from 'lucide-react';
 import { BrandLogo } from './components/BrandLogo';
 import { GeneratorView } from './components/GeneratorView';
 import { HomeworkEditor } from './components/HomeworkEditor';
@@ -7,17 +7,20 @@ import { LibraryView } from './components/LibraryView';
 import { OnlineQuizView } from './components/OnlineQuizView';
 import { PrintWorksheet } from './components/PrintWorksheet';
 import { SettingsModal } from './components/SettingsModal';
+import { SidebarNav } from './components/SidebarNav';
+import { getSubjectDefinition } from './config/subjects';
 import {
-  DEFAULT_GENERATOR_CONFIG,
+  createDefaultConfigForSubject,
   fetchHomeworks,
   loadGeneratorDraft,
   loadSettings,
+  loadSubjectConfig,
   removeHomework,
   saveGeneratorDraft,
   saveSettings,
   upsertHomework,
 } from './services/storage';
-import { AppSettings, GeneratorConfig, Homework } from './types';
+import { AppSettings, GeneratorConfig, Homework, SubjectId } from './types';
 import { AttachedMaterial } from './utils/fileExtractor';
 import { createId } from './utils/promptBuilder';
 
@@ -48,6 +51,7 @@ export function App() {
   );
 
   const [page, setPage] = useState<TeacherPage>('generate');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
   const [showSettings, setShowSettings] = useState(false);
 
@@ -73,9 +77,17 @@ export function App() {
   }, [generatorConfig, generatorAiMode, generatorMaterials]);
 
   const handleResetGenerator = () => {
-    setGeneratorConfig(DEFAULT_GENERATOR_CONFIG);
+    setGeneratorConfig(createDefaultConfigForSubject(generatorConfig.subject || 'english'));
     setGeneratorMaterials([]);
     setGeneratorPastedResult('');
+  };
+
+  const handleSelectSubject = (subject: SubjectId) => {
+    if ((generatorConfig.subject || 'english') !== subject) {
+      setGeneratorConfig(loadSubjectConfig(subject));
+      setGeneratorPastedResult('');
+    }
+    setPage('generate');
   };
 
   useEffect(() => {
@@ -166,68 +178,78 @@ export function App() {
     await refreshLibrary();
   };
 
+  const activeSubject = generatorConfig.subject || 'english';
+  const activeSubjectDef = getSubjectDefinition(activeSubject);
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xs">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div
-            onClick={() => setPage('generate')}
-            className="flex cursor-pointer items-center gap-2.5"
-          >
-            <BrandLogo className="h-10 w-10 rounded-xl shadow-xs" />
-            <div>
-              <h1 className="text-base font-bold text-slate-900 leading-tight">
-                Trợ Lý Giao Bài Tập Tiếng Anh
-              </h1>
-              <p className="text-[11px] text-slate-500">
-                Tạo đề bằng AI • Xuất Word / PDF • Link làm bài tự chấm
-              </p>
+    <div className="min-h-screen bg-slate-50/80">
+      <SidebarNav
+        activePage={page === 'library' ? 'library' : page === 'editor' ? 'editor' : 'generate'}
+        activeSubject={activeSubject}
+        homeworkCount={homeworks.length}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
+        onSelectSubject={handleSelectSubject}
+        onOpenLibrary={() => {
+          refreshLibrary();
+          setPage('library');
+        }}
+        onOpenSettings={() => setShowSettings(true)}
+      />
+
+      <div className="lg:pl-72">
+        {/* Top Bar */}
+        <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-xs">
+          <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-6">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 lg:hidden"
+                aria-label="Mở menu môn học"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+
+              <div className="flex items-center gap-2 lg:hidden">
+                <BrandLogo className="h-7 w-7 rounded-lg" />
+                <span className="text-sm font-bold text-slate-900">EduLab Studio</span>
+              </div>
+
+              <div className="hidden lg:flex items-center gap-2 text-xs text-slate-500">
+                <span className="font-semibold text-slate-400">Không gian soạn đề</span>
+                <span>/</span>
+                <span className="font-bold text-slate-800">
+                  {page === 'generate' && `Môn ${activeSubjectDef.name}`}
+                  {page === 'library' && 'Kho bài tập đã lưu'}
+                  {page === 'editor' && (activeHomework?.title || 'Chỉnh sửa bài tập')}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {hasServerGeminiKey && (
+                <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200/70">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  AI sẵn sàng
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowSettings(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Settings className="h-3.5 w-3.5 text-slate-500" />
+                <span className="hidden sm:inline">
+                  {settings.teacherName ? settings.teacherName : 'Thông tin GV'}
+                </span>
+              </button>
             </div>
           </div>
+        </header>
 
-          <nav className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPage('generate')}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                page === 'generate'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Sparkles className="h-4 w-4" /> Tạo bài mới
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                refreshLibrary();
-                setPage('library');
-              }}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                page === 'library' || page === 'editor'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <FolderHeart className="h-4 w-4" /> Kho bài tập ({homeworks.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowSettings(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              <Settings className="h-4 w-4 text-slate-500" />
-              <span className="hidden sm:inline">Thông tin GV</span>
-            </button>
-          </nav>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="px-4 pt-6">
+        {/* Main Content */}
+        <main className="px-4 py-5 sm:px-6 pb-14">
         {page === 'generate' && (
           <GeneratorView
             settings={settings}
@@ -243,6 +265,11 @@ export function App() {
             onResetForm={handleResetGenerator}
             onCreated={handleCreatedHomework}
             onOpenSettings={() => setShowSettings(true)}
+            recentHomeworks={homeworks}
+            onOpenHomework={(hw) => {
+              setActiveHomework(hw);
+              setPage('editor');
+            }}
           />
         )}
 
@@ -277,6 +304,7 @@ export function App() {
           />
         )}
       </main>
+      </div>
 
       {showSettings && (
         <SettingsModal

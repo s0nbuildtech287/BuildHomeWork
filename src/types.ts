@@ -1,3 +1,12 @@
+export type SubjectId =
+  | 'english'
+  | 'math'
+  | 'physics'
+  | 'chemistry'
+  | 'literature'
+  | 'history'
+  | 'geography';
+
 export type TargetLevel = 'elementary' | 'secondary' | 'communication';
 
 export type ListeningStyle = 'multiple_choice' | 'note_fill' | 'matching_box' | 'true_false';
@@ -9,7 +18,9 @@ export type QuestionType =
   | 'sentence_order'
   | 'rewrite'
   | 'find_mistake'
-  | 'writing';
+  | 'writing'
+  | 'short_answer'
+  | 'essay';
 
 export interface Question {
   id: string;
@@ -40,6 +51,7 @@ export interface HomeworkSection {
 
 export interface Homework {
   id: string;
+  subject?: SubjectId;
   title: string;
   subtitle?: string;
   level: TargetLevel;
@@ -63,9 +75,13 @@ export interface SectionCountConfig {
   find_mistake: number;
   listening_questions: number;
   writing: number;
+  true_false_group: number;
+  short_answer: number;
+  essay: number;
 }
 
 export interface GeneratorConfig {
+  subject: SubjectId;
   level: TargetLevel;
   gradeOrClass: string;
   topic: string;
@@ -74,6 +90,8 @@ export interface GeneratorConfig {
   studentMistakes: string;
   extraInstructions?: string;
   listeningStyle?: ListeningStyle;
+  includeStepByStep?: boolean;
+  useLatexFormulas?: boolean;
   difficulty: 'easy' | 'medium' | 'hard';
   counts: SectionCountConfig;
 }

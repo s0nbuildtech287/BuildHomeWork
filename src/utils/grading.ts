@@ -32,6 +32,10 @@ export function isChoiceQuestion(question: Question): boolean {
   return question.type === 'multiple_choice' || question.type === 'find_mistake';
 }
 
+export function isEssayQuestion(question: Question): boolean {
+  return question.type === 'writing' || question.type === 'essay';
+}
+
 export function resolveCorrectOptionIndex(question: Question): number {
   const options = question.options || [];
   if (options.length === 0) return -1;
@@ -51,7 +55,7 @@ export function resolveCorrectOptionIndex(question: Question): number {
 }
 
 export function isQuestionAnswerCorrect(question: Question, studentAnswer: string): boolean {
-  if (question.type === 'writing') {
+  if (isEssayQuestion(question)) {
     return studentAnswer.trim().length > 0;
   }
 
@@ -94,7 +98,7 @@ export function gradeHomework(
   for (const section of homework.sections) {
     for (const q of section.questions) {
       const studentAnswer = answers[q.id] || '';
-      const isWriting = q.type === 'writing';
+      const isWriting = isEssayQuestion(q);
       const isCorrect = isQuestionAnswerCorrect(q, studentAnswer);
 
       if (!isWriting) {

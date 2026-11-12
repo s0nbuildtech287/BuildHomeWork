@@ -15,6 +15,8 @@ import {
   Trash2,
   Wand2,
 } from 'lucide-react';
+import { createEmptyCounts, getSubjectDefinition, SubjectTemplate } from '../config/subjects';
+import { GeneratorRightPanel } from './GeneratorRightPanel';
 import { attachAudioToListeningSections, generateHomeworkWithGemini } from '../services/gemini';
 import {
   AppSettings,
@@ -41,41 +43,31 @@ interface GeneratorViewProps {
   onResetForm: () => void;
   onCreated: (homework: Homework) => void;
   onOpenSettings: () => void;
+  recentHomeworks?: Homework[];
+  onOpenHomework?: (homework: Homework) => void;
 }
 
 const DEFAULT_COUNTS_BY_LEVEL: Record<TargetLevel, SectionCountConfig> = {
   elementary: {
+    ...createEmptyCounts(),
     multiple_choice: 5,
     fill_blank: 4,
-    word_form: 0,
     sentence_order: 3,
-    rewrite: 0,
-    reading_questions: 0,
-    find_mistake: 0,
-    listening_questions: 0,
-    writing: 0,
   },
   secondary: {
+    ...createEmptyCounts(),
     multiple_choice: 6,
     fill_blank: 4,
     word_form: 3,
-    sentence_order: 0,
     rewrite: 3,
     reading_questions: 4,
-    find_mistake: 0,
-    listening_questions: 0,
-    writing: 0,
   },
   communication: {
+    ...createEmptyCounts(),
     multiple_choice: 5,
     fill_blank: 5,
-    word_form: 0,
     sentence_order: 3,
     rewrite: 2,
-    reading_questions: 0,
-    find_mistake: 0,
-    listening_questions: 0,
-    writing: 0,
   },
 };
 
@@ -93,12 +85,15 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
   onResetForm,
   onCreated,
   onOpenSettings,
+  recentHomeworks = [],
+  onOpenHomework,
 }) => {
   const [readingFiles, setReadingFiles] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [listeningMenuOpen, setListeningMenuOpen] = useState(false);
+  const subjectDef = useMemo(() => getSubjectDefinition(config.subject), [config.subject]);
 
   const listeningStyleOptions: Array<{ value: ListeningStyle; short: string; label: string }> = [
     { value: 'multiple_choice', short: 'Khoanh A/B/C/D', label: 'Khoanh trắc nghiệm A/B/C/D' },
@@ -115,19 +110,11 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
     listeningStyleOptions[0];
 
   const totalQuestions = useMemo(() => {
-    const c = config.counts;
-    return (
-      c.multiple_choice +
-      c.fill_blank +
-      c.word_form +
-      c.sentence_order +
-      c.rewrite +
-      c.reading_questions +
-      c.find_mistake +
-      c.listening_questions +
-      c.writing
+    return subjectDef.questionOptions.reduce(
+      (sum, opt) => sum + (config.counts[opt.key] || 0),
+      0
     );
-  }, [config.counts]);
+  }, [config.counts, subjectDef]);
 
   const binaryFilesCount = useMemo(
     () =>
@@ -157,27 +144,42 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
   );
 
   const handleLevelChange = (level: TargetLevel) => {
-    setConfig((prev) => ({
-      ...prev,
-      level,
-      counts: { ...DEFAULT_COUNTS_BY_LEVEL[level] },
-    }));
+    if ((config.subject || 'english') === 'english') {
+      setConfig((prev) => ({
+        ...prev,
+        level,
+        counts: { ...DEFAULT_COUNTS_BY_LEVEL[level] },
+      }));
+    } else {
+      setConfig((prev) => ({ ...prev, level }));
+    }
   };
 
   const applyPresetCounts = (preset: 'light' | 'standard' | 'medium30' | 'exam50') => {
+    if ((config.subject || 'english') !== 'english') {
+      const base = { ...createEmptyCounts(), ...subjectDef.defaultCounts };
+      if (preset === 'standard') {
+        setConfig((p) => ({ ...p, counts: base }));
+        return;
+      }
+      const factor = preset === 'light' ? 0.65 : preset === 'medium30' ? 2 : 3.2;
+      const scaled = createEmptyCounts();
+      for (const opt of subjectDef.questionOptions) {
+        const val = base[opt.key] || 0;
+        scaled[opt.key] = val > 0 ? Math.max(1, Math.round(val * factor)) : 0;
+      }
+      setConfig((p) => ({ ...p, counts: scaled }));
+      return;
+    }
+
     if (preset === 'light') {
       setConfig((p) => ({
         ...p,
         counts: {
+          ...createEmptyCounts(),
           multiple_choice: 5,
           fill_blank: 3,
-          word_form: 0,
           sentence_order: 2,
-          rewrite: 0,
-          reading_questions: 0,
-          find_mistake: 0,
-          listening_questions: 0,
-          writing: 0,
         },
       }));
     } else if (preset === 'standard') {
@@ -189,30 +191,26 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
       setConfig((p) => ({
         ...p,
         counts: {
+          ...createEmptyCounts(),
           multiple_choice: 10,
           fill_blank: 5,
           word_form: 4,
-          sentence_order: 0,
           rewrite: 3,
           reading_questions: 5,
           find_mistake: 3,
-          listening_questions: 0,
-          writing: 0,
         },
       }));
     } else {
       setConfig((p) => ({
         ...p,
         counts: {
+          ...createEmptyCounts(),
           multiple_choice: 20,
           fill_blank: 6,
           word_form: 5,
-          sentence_order: 0,
           rewrite: 5,
           reading_questions: 8,
           find_mistake: 6,
-          listening_questions: 0,
-          writing: 0,
         },
       }));
     }
@@ -314,6 +312,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
     setLoading(true);
     try {
       const homework = parseAiHomeworkResponse(pastedResult, {
+        subject: config.subject,
         level: config.level,
         gradeOrClass: config.gradeOrClass,
         teacherName: settings.teacherName,
@@ -331,68 +330,62 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
     }
   };
 
-  const questionTypesMeta: Array<{
-    key: keyof SectionCountConfig;
-    label: string;
-    desc: string;
-  }> = [
-    { key: 'multiple_choice', label: 'Trắc nghiệm (A/B/C/D)', desc: 'Phù hợp mọi cấp, tự chấm nhanh' },
-    { key: 'fill_blank', label: 'Điền từ vào chỗ trống', desc: 'Ôn từ vựng & cấu trúc câu' },
-    { key: 'word_form', label: 'Chia động từ / Dạng từ', desc: 'Rất tốt cho THCS / THPT' },
-    { key: 'sentence_order', label: 'Sắp xếp từ thành câu', desc: 'Rất hợp Tiểu học & Giao tiếp' },
-    { key: 'rewrite', label: 'Viết lại câu', desc: 'Luyện biến đổi cấu trúc' },
-    { key: 'reading_questions', label: 'Đọc hiểu + câu hỏi', desc: '1 đoạn văn ngắn kèm câu hỏi' },
-    { key: 'find_mistake', label: 'Tìm lỗi sai (A/B/C/D)', desc: 'Chọn phần sai trong câu' },
-    { key: 'listening_questions', label: 'Bài Nghe (Kèm file MP3)', desc: 'Tự tạo giọng đọc hoặc dùng MP3 tải lên' },
-    { key: 'writing', label: 'Bài Viết (Writing)', desc: 'Viết câu / đoạn văn kèm bài mẫu' },
-  ];
+  const levelIcons = [BookOpen, FilePlus2, MessageSquare];
+
+  const handleApplyTemplate = (tpl: SubjectTemplate) => {
+    setError('');
+    setConfig((prev) => ({
+      ...prev,
+      gradeOrClass: tpl.gradeOrClass,
+      topic: tpl.topic,
+      grammarFocus: tpl.grammarFocus,
+      vocabularyFocus: tpl.vocabularyFocus,
+    }));
+  };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto grid w-full max-w-[1600px] grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="min-w-0 space-y-5">
+      {/* Subject Header Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-xs">
+        <div className="flex items-center gap-3">
+          <span className={`rounded-xl px-3 py-1.5 text-xs font-bold ${subjectDef.badgeClass}`}>
+            Môn {subjectDef.name}
+          </span>
+          <div>
+            <h2 className="text-base font-bold text-slate-900">
+              Soạn bài tập & đề kiểm tra {subjectDef.name}
+            </h2>
+            <p className="text-xs text-slate-500">{subjectDef.tagline}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setError('');
+            onResetForm();
+          }}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+        >
+          <RotateCcw className="h-3.5 w-3.5" /> Xóa để nhập bài mới
+        </button>
+      </div>
+
       {/* Target Level */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-bold text-slate-900">1. Chọn đối tượng học sinh</h2>
-          <button
-            type="button"
-            onClick={() => {
-              setError('');
-              onResetForm();
-            }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-          >
-            <RotateCcw className="h-3.5 w-3.5" /> Xóa để nhập bài mới
-          </button>
+          <h2 className="text-base font-bold text-slate-900">1. Chọn cấp học / đối tượng</h2>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {[
-            {
-              id: 'elementary' as TargetLevel,
-              title: 'Tiểu học (Lớp 1–5)',
-              desc: 'Câu ngắn, từ vựng gần gũi, sắp xếp câu & trắc nghiệm vui',
-              icon: BookOpen,
-            },
-            {
-              id: 'secondary' as TargetLevel,
-              title: 'THCS / THPT (Lớp 6–12)',
-              desc: 'Sát form đề trường: chia động từ, viết lại câu, đọc hiểu',
-              icon: FilePlus2,
-            },
-            {
-              id: 'communication' as TargetLevel,
-              title: 'Giao tiếp / Trung tâm',
-              desc: 'Hội thoại thực tế, mẫu câu tự nhiên, phản xạ tình huống',
-              icon: MessageSquare,
-            },
-          ].map((item) => {
-            const Icon = item.icon;
-            const active = config.level === item.id;
+          {subjectDef.levels.map((item, idx) => {
+            const Icon = levelIcons[idx % levelIcons.length];
+            const active = config.level === item.value;
             return (
               <button
-                key={item.id}
+                key={item.value}
                 type="button"
-                onClick={() => handleLevelChange(item.id)}
+                onClick={() => handleLevelChange(item.value)}
                 className={`flex items-start gap-3 rounded-xl border p-3.5 text-left transition ${
                   active
                     ? 'border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-100'
@@ -407,7 +400,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
                   <Icon className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-slate-900">{item.title}</div>
+                  <div className="text-sm font-bold text-slate-900">{item.label}</div>
                   <div className="mt-0.5 text-xs text-slate-500">{item.desc}</div>
                 </div>
               </button>
@@ -425,13 +418,13 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="sm:col-span-2">
             <label className="mb-1 block text-xs font-semibold text-slate-700">
-              Chủ đề / Unit / Bài học hôm nay *
+              Chủ đề / Chương / Bài học hôm nay *
             </label>
             <input
               type="text"
               value={config.topic}
               onChange={(e) => setConfig({ ...config, topic: e.target.value })}
-              placeholder="VD: Unit 4 - Present Continuous & Weather vocabulary"
+              placeholder={subjectDef.topicPlaceholder}
               className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
             />
           </div>
@@ -443,7 +436,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
               type="text"
               value={config.gradeOrClass}
               onChange={(e) => setConfig({ ...config, gradeOrClass: e.target.value })}
-              placeholder="VD: Lớp 7A, Starters..."
+              placeholder={`VD: ${subjectDef.defaultGrade}...`}
               className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
             />
           </div>
@@ -452,25 +445,25 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-semibold text-slate-700">
-              Ngữ pháp trọng tâm
+              {subjectDef.focus1Label}
             </label>
             <textarea
               rows={2}
               value={config.grammarFocus}
               onChange={(e) => setConfig({ ...config, grammarFocus: e.target.value })}
-              placeholder="VD: S + am/is/are + V-ing; phân biệt với Hiện tại đơn..."
+              placeholder={subjectDef.focus1Placeholder}
               className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
             />
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold text-slate-700">
-              Từ vựng cần ôn (nếu có)
+              {subjectDef.focus2Label}
             </label>
             <textarea
               rows={2}
               value={config.vocabularyFocus}
               onChange={(e) => setConfig({ ...config, vocabularyFocus: e.target.value })}
-              placeholder="VD: sunny, rainy, coat, umbrella, play football..."
+              placeholder={subjectDef.focus2Placeholder}
               className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
             />
           </div>
@@ -479,13 +472,13 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="sm:col-span-2">
             <label className="mb-1 block text-xs font-semibold text-slate-700">
-              Lỗi học sinh hay nhầm khi giảng trên lớp (AI sẽ bẫy nhẹ để luyện kỹ)
+              {subjectDef.mistakesLabel}
             </label>
             <input
               type="text"
               value={config.studentMistakes}
               onChange={(e) => setConfig({ ...config, studentMistakes: e.target.value })}
-              placeholder="VD: Hay quên gấp đôi phụ âm (run -> running), hay thiếu động từ to be"
+              placeholder={subjectDef.mistakesPlaceholder}
               className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
             />
           </div>
@@ -507,6 +500,33 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
             </select>
           </div>
         </div>
+
+        {subjectDef.supportsStemOptions && (
+          <div className="mt-3 flex flex-wrap gap-4 rounded-xl border border-blue-100 bg-blue-50/50 px-3.5 py-2.5 text-xs text-slate-700">
+            <label className="inline-flex cursor-pointer items-center gap-2 font-medium">
+              <input
+                type="checkbox"
+                checked={config.useLatexFormulas !== false}
+                onChange={(e) =>
+                  setConfig({ ...config, useLatexFormulas: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              Hiển thị công thức Toán / Lý / Hóa đẹp mắt (x², a/b, H₂SO₄)
+            </label>
+            <label className="inline-flex cursor-pointer items-center gap-2 font-medium">
+              <input
+                type="checkbox"
+                checked={config.includeStepByStep !== false}
+                onChange={(e) =>
+                  setConfig({ ...config, includeStepByStep: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              Kèm lời giải chi tiết từng bước trong đáp án
+            </label>
+          </div>
+        )}
 
         {/* Lesson Materials Upload (Images, Word .docx, PDF, TXT, Audio MP3) */}
         <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-3.5">
@@ -685,8 +705,8 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {questionTypesMeta.map((item) => {
-            const count = config.counts[item.key];
+          {subjectDef.questionOptions.map((item) => {
+            const count = config.counts[item.key] || 0;
             const isListeningCard = item.key === 'listening_questions';
 
             return (
@@ -920,6 +940,16 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
           </div>
         )}
       </div>
+      </div>
+
+      <GeneratorRightPanel
+        config={config}
+        hasMaterials={materials.length > 0}
+        totalQuestions={totalQuestions}
+        recentHomeworks={recentHomeworks}
+        onApplyTemplate={handleApplyTemplate}
+        onOpenHomework={(hw) => onOpenHomework?.(hw)}
+      />
     </div>
   );
 };

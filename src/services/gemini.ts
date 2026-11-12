@@ -173,6 +173,7 @@ export async function generateHomeworkWithGemini(params: {
   }
 
   const homework = parseAiHomeworkResponse(text, {
+    subject: config.subject,
     level: config.level,
     gradeOrClass: config.gradeOrClass,
     teacherName,

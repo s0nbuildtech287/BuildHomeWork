@@ -20,6 +20,7 @@ import {
   Volume2,
   X,
 } from 'lucide-react';
+import { MathText } from './MathText';
 import { generateTtsAudio } from '../services/gemini';
 import { fetchSubmissions } from '../services/storage';
 import { Homework, HomeworkSection, Question, StudentSubmission } from '../types';
@@ -27,6 +28,7 @@ import { DocxExportMode, exportHomeworkToDocx } from '../utils/docxExport';
 import {
   countHomeworkQuestions,
   isChoiceQuestion,
+  isEssayQuestion,
   resolveCorrectOptionIndex,
   stripOptionPrefix,
 } from '../utils/grading';
@@ -795,6 +797,13 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                             </label>
                           </div>
 
+                          {q.prompt.includes('$') && (
+                            <div className="rounded-lg border border-blue-100 bg-blue-50/40 px-3 py-1.5 text-xs text-slate-700">
+                              <span className="mr-1.5 font-semibold text-blue-700">Xem trước công thức:</span>
+                              <MathText text={q.prompt} />
+                            </div>
+                          )}
+
                           {q.imageUrl && (
                             <div className="relative inline-block rounded-lg border border-slate-200 bg-white p-1.5">
                               <img
@@ -889,11 +898,11 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                             <div className="grid grid-cols-1 gap-2 rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 sm:grid-cols-2">
                               <div>
                                 <label className="block text-[11px] font-bold text-emerald-800">
-                                  {q.type === 'writing'
-                                    ? 'Bài viết mẫu tham khảo'
+                                  {isEssayQuestion(q)
+                                    ? 'Bài mẫu / Đáp án chuẩn'
                                     : 'Đáp án chuẩn (nhiều đáp án ngăn cách bởi | )'}
                                 </label>
-                                {q.type === 'writing' ? (
+                                {isEssayQuestion(q) ? (
                                   <textarea
                                     rows={3}
                                     value={q.correctAnswer}
@@ -919,11 +928,11 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
                               </div>
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-600">
-                                  {q.type === 'writing'
-                                    ? 'Tiêu chí chấm & gợi ý từ vựng'
+                                  {isEssayQuestion(q)
+                                    ? 'Hướng dẫn giải / Thang điểm'
                                     : 'Giải thích cho học sinh'}
                                 </label>
-                                {q.type === 'writing' ? (
+                                {isEssayQuestion(q) ? (
                                   <textarea
                                     rows={3}
                                     value={q.explanation}

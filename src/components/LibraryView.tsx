@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Copy, FileText, FolderOpen, Plus, Search, Trash2, Users } from 'lucide-react';
-import { Homework, TargetLevel } from '../types';
+import { getSubjectDefinition, SUBJECT_LIST } from '../config/subjects';
+import { Homework, SubjectId, TargetLevel } from '../types';
 import { countHomeworkQuestions } from '../utils/grading';
 
 interface LibraryViewProps {
@@ -28,10 +29,12 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<TargetLevel | 'all'>('all');
+  const [filterSubject, setFilterSubject] = useState<SubjectId | 'all'>('all');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return homeworks.filter((hw) => {
+      if (filterSubject !== 'all' && (hw.subject || 'english') !== filterSubject) return false;
       if (filterLevel !== 'all' && hw.level !== filterLevel) return false;
       if (!q) return true;
       return (
@@ -41,10 +44,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         (hw.gradeOrClass || '').toLowerCase().includes(q)
       );
     });
-  }, [homeworks, query, filterLevel]);
+  }, [homeworks, query, filterLevel, filterSubject]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div className="mx-auto w-full max-w-[1600px] space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -58,6 +61,19 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={filterSubject}
+            onChange={(e) => setFilterSubject(e.target.value as SubjectId | 'all')}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+          >
+            <option value="all">Tất cả môn học</option>
+            {SUBJECT_LIST.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+
           <select
             value={filterLevel}
             onChange={(e) => setFilterLevel(e.target.value as TargetLevel | 'all')}
@@ -97,6 +113,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {filtered.map((hw) => {
             const badge = LEVEL_BADGES[hw.level];
+            const subjectDef = getSubjectDefinition(hw.subject);
             const count = countHomeworkQuestions(hw);
             const subCount = submissionCounts[hw.id] || 0;
 
@@ -107,9 +124,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               >
                 <div>
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${badge.cls}`}>
-                      {badge.label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${subjectDef.badgeClass}`}>
+                        {subjectDef.shortName}
+                      </span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.cls}`}>
+                        {badge.label}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2 text-xs text-slate-500">
                       {hw.gradeOrClass && (
                         <span className="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
