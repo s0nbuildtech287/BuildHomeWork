@@ -46,9 +46,52 @@ export function buildHomeworkPrompt(
   }
   const requestedParts: string[] = [];
 
+  if (config.counts.pronunciation_stress > 0) {
+    const pronCount = Math.ceil(config.counts.pronunciation_stress / 2);
+    const stressCount = config.counts.pronunciation_stress - pronCount;
+    requestedParts.push(
+      `- "pronunciation_stress": Tạo ${pronCount > 0 && stressCount > 0 ? '2 section' : '1 section'} (type="multiple_choice"):` +
+        (pronCount > 0
+          ? `\n  + Section Phát âm (${pronCount} câu): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word whose underlined part differs from the other three in pronunciation in each of the following questions." Trong "options" đánh dấu phần âm cần xét bằng dấu ngoặc vuông, ví dụ ["occ[u]py", "obs[e]rve", "pr[o]mote", "c[u]stom"].`
+          : '') +
+        (stressCount > 0
+          ? `\n  + Section Trọng âm (${stressCount} câu): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word that differs from the other three in the position of primary stress in each of the following questions."`
+          : '')
+    );
+  }
   if (config.counts.multiple_choice > 0) {
     requestedParts.push(
-      `- "multiple_choice": ${config.counts.multiple_choice} câu trắc nghiệm 4 lựa chọn (options gồm đúng 4 chuỗi không kèm tiền tố A./B./C./D., correctAnswer ghi chính xác nội dung đáp án đúng).`
+      `- "multiple_choice": ${config.counts.multiple_choice} câu trắc nghiệm 4 lựa chọn (instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the correct answer to each of the following questions.", options gồm đúng 4 chuỗi không kèm tiền tố A./B./C./D., correctAnswer ghi chính xác nội dung đáp án đúng).`
+    );
+  }
+  if (config.counts.announcement_cloze > 0) {
+    requestedParts.push(
+      `- "announcement_cloze": 1 section Thông báo / Quảng cáo điền từ (type="multiple_choice") gồm 1 mẫu thông báo/tờ rơi ngắn để trong "readingPassage" có ${config.counts.announcement_cloze} chỗ trống đánh số (1), (2)...; instruction ghi chuẩn "Read the following announcement and mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks." kèm ${config.counts.announcement_cloze} câu hỏi A/B/C/D.`
+    );
+  }
+  if (config.counts.paragraph_order > 0) {
+    requestedParts.push(
+      `- "paragraph_order": 1 section Sắp xếp câu thành đoạn văn (${config.counts.paragraph_order} câu, type="multiple_choice"): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the correct arrangement of the sentences to make a meaningful paragraph/letter in each of the following questions." Trong mỗi "prompt" liệt kê rõ 4 câu a, b, c, d xuống dòng; "options" là 4 chuỗi thứ tự ví dụ ["a-b-c-d", "a-c-d-b", "b-c-d-a", "c-a-b-d"].`
+    );
+  }
+  if (config.counts.guided_cloze > 0) {
+    requestedParts.push(
+      `- "guided_cloze": 1 section Đọc điền đoạn văn (type="multiple_choice") gồm 1 đoạn văn tiếng Anh trong "readingPassage" có ${config.counts.guided_cloze} chỗ trống đánh số (1), (2)...; instruction ghi chuẩn "Read the following passage and mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks." kèm ${config.counts.guided_cloze} câu hỏi A/B/C/D.`
+    );
+  }
+  if (config.counts.sentence_transform_mcq > 0) {
+    requestedParts.push(
+      `- "sentence_transform_mcq": 1 section Viết lại / Dựng câu trắc nghiệm (${config.counts.sentence_transform_mcq} câu, type="multiple_choice"): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the sentence that is closest in meaning to the original sentence / made from the words given in each of the following questions."`
+    );
+  }
+  if (config.counts.sign_notice > 0) {
+    requestedParts.push(
+      `- "sign_notice": 1 section Đọc biển báo / Thông báo (${config.counts.sign_notice} câu, type="multiple_choice"): instruction ghi chuẩn "Read the following sign or notice and mark the letter A, B, C or D on your answer sheet to indicate the correct answer to each of the following questions." Trong "prompt" mô tả ngắn nội dung biển báo/thông báo (hoặc ghi "[Chèn ảnh biển báo] What does the sign/notice say?") kèm 4 đáp án A/B/C/D.`
+    );
+  }
+  if (config.counts.removed_sentences > 0) {
+    requestedParts.push(
+      `- "removed_sentences": 1 section Ghép cụm/câu bị lược vào đoạn văn (${config.counts.removed_sentences} câu, type="multiple_choice"): đặt đoạn văn có các chỗ trống đánh số vào "readingPassage" VÀ liệt kê các phương án A, B, C, D tương ứng; instruction ghi chuẩn "Four phrases/sentences have been removed from the text below. For each question, mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks."`
     );
   }
   if (config.counts.fill_blank > 0) {
@@ -184,9 +227,52 @@ function buildSubjectHomeworkPrompt(
   const levelInfo = subjectDef.levels.find((l) => l.value === config.level);
   const requestedParts: string[] = [];
 
+  if (config.counts.pronunciation_stress > 0) {
+    const pronCount = Math.ceil(config.counts.pronunciation_stress / 2);
+    const stressCount = config.counts.pronunciation_stress - pronCount;
+    requestedParts.push(
+      `- "pronunciation_stress": Tạo ${pronCount > 0 && stressCount > 0 ? '2 section' : '1 section'} (type="multiple_choice"):` +
+        (pronCount > 0
+          ? `\n  + Section Phát âm (${pronCount} câu): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word whose underlined part differs from the other three in pronunciation in each of the following questions." Trong "options" đánh dấu phần âm cần xét bằng dấu ngoặc vuông, ví dụ ["occ[u]py", "obs[e]rve", "pr[o]mote", "c[u]stom"].`
+          : '') +
+        (stressCount > 0
+          ? `\n  + Section Trọng âm (${stressCount} câu): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word that differs from the other three in the position of primary stress in each of the following questions."`
+          : '')
+    );
+  }
   if (config.counts.multiple_choice > 0) {
     requestedParts.push(
-      `- "multiple_choice": ${config.counts.multiple_choice} câu trắc nghiệm 4 lựa chọn (options gồm đúng 4 chuỗi không kèm tiền tố A./B./C./D., correctAnswer ghi chính xác nội dung đáp án đúng).`
+      `- "multiple_choice": ${config.counts.multiple_choice} câu trắc nghiệm 4 lựa chọn (instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the correct answer to each of the following questions.", options gồm đúng 4 chuỗi không kèm tiền tố A./B./C./D., correctAnswer ghi chính xác nội dung đáp án đúng).`
+    );
+  }
+  if (config.counts.announcement_cloze > 0) {
+    requestedParts.push(
+      `- "announcement_cloze": 1 section Thông báo / Quảng cáo điền từ (type="multiple_choice") gồm 1 mẫu thông báo/tờ rơi ngắn để trong "readingPassage" có ${config.counts.announcement_cloze} chỗ trống đánh số (1), (2)...; instruction ghi chuẩn "Read the following announcement and mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks." kèm ${config.counts.announcement_cloze} câu hỏi A/B/C/D.`
+    );
+  }
+  if (config.counts.paragraph_order > 0) {
+    requestedParts.push(
+      `- "paragraph_order": 1 section Sắp xếp câu thành đoạn văn (${config.counts.paragraph_order} câu, type="multiple_choice"): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the correct arrangement of the sentences to make a meaningful paragraph/letter in each of the following questions." Trong mỗi "prompt" liệt kê rõ 4 câu a, b, c, d xuống dòng; "options" là 4 chuỗi thứ tự ví dụ ["a-b-c-d", "a-c-d-b", "b-c-d-a", "c-a-b-d"].`
+    );
+  }
+  if (config.counts.guided_cloze > 0) {
+    requestedParts.push(
+      `- "guided_cloze": 1 section Đọc điền đoạn văn (type="multiple_choice") gồm 1 đoạn văn tiếng Anh trong "readingPassage" có ${config.counts.guided_cloze} chỗ trống đánh số (1), (2)...; instruction ghi chuẩn "Read the following passage and mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks." kèm ${config.counts.guided_cloze} câu hỏi A/B/C/D.`
+    );
+  }
+  if (config.counts.sentence_transform_mcq > 0) {
+    requestedParts.push(
+      `- "sentence_transform_mcq": 1 section Viết lại / Dựng câu trắc nghiệm (${config.counts.sentence_transform_mcq} câu, type="multiple_choice"): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the sentence that is closest in meaning to the original sentence / made from the words given in each of the following questions."`
+    );
+  }
+  if (config.counts.sign_notice > 0) {
+    requestedParts.push(
+      `- "sign_notice": 1 section Đọc biển báo / Thông báo (${config.counts.sign_notice} câu, type="multiple_choice"): instruction ghi chuẩn "Read the following sign or notice and mark the letter A, B, C or D on your answer sheet to indicate the correct answer to each of the following questions." Trong "prompt" mô tả ngắn nội dung biển báo/thông báo (hoặc ghi "[Chèn ảnh biển báo] What does the sign/notice say?") kèm 4 đáp án A/B/C/D.`
+    );
+  }
+  if (config.counts.removed_sentences > 0) {
+    requestedParts.push(
+      `- "removed_sentences": 1 section Ghép cụm/câu bị lược vào đoạn văn (${config.counts.removed_sentences} câu, type="multiple_choice"): đặt đoạn văn có các chỗ trống đánh số vào "readingPassage" VÀ liệt kê các phương án A, B, C, D tương ứng; instruction ghi chuẩn "Four phrases/sentences have been removed from the text below. For each question, mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks."`
     );
   }
   if (config.counts.true_false_group > 0) {

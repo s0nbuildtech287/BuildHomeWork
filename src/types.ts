@@ -75,6 +75,13 @@ export interface SectionCountConfig {
   find_mistake: number;
   listening_questions: number;
   writing: number;
+  pronunciation_stress: number;
+  announcement_cloze: number;
+  paragraph_order: number;
+  guided_cloze: number;
+  sentence_transform_mcq: number;
+  sign_notice: number;
+  removed_sentences: number;
   true_false_group: number;
   short_answer: number;
   essay: number;

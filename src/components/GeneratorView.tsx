@@ -155,10 +155,12 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
     }
   };
 
-  const applyPresetCounts = (preset: 'light' | 'standard' | 'medium30' | 'exam50') => {
+  const applyPresetCounts = (
+    preset: 'light' | 'standard' | 'medium30' | 'exam50' | 'gs40'
+  ) => {
     if ((config.subject || 'english') !== 'english') {
       const base = { ...createEmptyCounts(), ...subjectDef.defaultCounts };
-      if (preset === 'standard') {
+      if (preset === 'standard' || preset === 'gs40') {
         setConfig((p) => ({ ...p, counts: base }));
         return;
       }
@@ -169,6 +171,26 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         scaled[opt.key] = val > 0 ? Math.max(1, Math.round(val * factor)) : 0;
       }
       setConfig((p) => ({ ...p, counts: scaled }));
+      return;
+    }
+
+    if (preset === 'gs40') {
+      setConfig((p) => ({
+        ...p,
+        level: 'secondary',
+        counts: {
+          ...createEmptyCounts(),
+          pronunciation_stress: 4,
+          multiple_choice: 8,
+          announcement_cloze: 4,
+          paragraph_order: 2,
+          guided_cloze: 6,
+          sentence_transform_mcq: 4,
+          sign_notice: 2,
+          reading_questions: 6,
+          removed_sentences: 4,
+        },
+      }));
       return;
     }
 
@@ -701,6 +723,15 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
             >
               Đề thi chuẩn (50 câu)
             </button>
+            {(config.subject || 'english') === 'english' && (
+              <button
+                type="button"
+                onClick={() => applyPresetCounts('gs40')}
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+              >
+                Form Vào 10 / GS (40 câu)
+              </button>
+            )}
           </div>
         </div>
 
