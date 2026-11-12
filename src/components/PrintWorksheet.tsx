@@ -3,7 +3,14 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import { MathText } from './MathText';
 import { Homework } from '../types';
 import { loadSettings } from '../services/storage';
-import { isChoiceQuestion, isEssayQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from '../utils/grading';
+import {
+  formatMcqOptionDisplay,
+  isChoiceQuestion,
+  isEssayQuestion,
+  resolveCorrectOptionIndex,
+  splitFormattedLines,
+  stripOptionPrefix,
+} from '../utils/grading';
 
 interface PrintWorksheetProps {
   homework: Homework;
@@ -144,7 +151,7 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
 
               {section.readingPassage && (
                 <div className="mb-3 rounded border-l-4 border-slate-400 bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-800 whitespace-pre-line">
-                  {section.readingPassage}
+                  {splitFormattedLines(section.readingPassage).join('\n')}
                 </div>
               )}
 
@@ -179,7 +186,7 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                         </div>
                       ) : (
                         <p className="whitespace-pre-line">
-                          <strong>{qNum}.</strong> <MathText text={q.prompt} />
+                          <strong>{qNum}.</strong> <MathText text={splitFormattedLines(q.prompt).join('\n')} />
                         </p>
                       )}
 
@@ -195,12 +202,20 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
 
                       {isChoiceQuestion(q) && q.options?.length && (
                         <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1 pl-5 sm:grid-cols-4">
-                          {q.options.map((opt, idx) => (
-                            <span key={idx}>
-                              <strong>{String.fromCharCode(65 + idx)}.</strong>{' '}
-                              <MathText text={stripOptionPrefix(opt)} />
-                            </span>
-                          ))}
+                          {q.options.map((opt, idx) => {
+                            const formatted = formatMcqOptionDisplay(opt, idx);
+                            return (
+                              <span key={idx}>
+                                <strong>{formatted.letter}.</strong>
+                                {formatted.text ? (
+                                  <>
+                                    {' '}
+                                    <MathText text={formatted.text} />
+                                  </>
+                                ) : null}
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
 

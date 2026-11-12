@@ -19,7 +19,14 @@ import {
 import { saveAs } from 'file-saver';
 import { AppSettings, Homework } from '../types';
 import { loadSettings } from '../services/storage';
-import { isChoiceQuestion, isEssayQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from './grading';
+import {
+  formatMcqOptionDisplay,
+  isChoiceQuestion,
+  isEssayQuestion,
+  resolveCorrectOptionIndex,
+  splitFormattedLines,
+  stripOptionPrefix,
+} from './grading';
 
 export type DocxExportMode = 'student' | 'student_with_key' | 'teacher';
 
@@ -381,22 +388,29 @@ export async function exportHomeworkToDocx(
     }
 
     if (section.readingPassage) {
-      children.push(
-        new Paragraph({
-          spacing: { before: 60, after: 140 },
-          shading: { type: ShadingType.CLEAR, fill: 'F8FAFC', color: 'auto' },
-          border: {
-            left: { style: BorderStyle.SINGLE, size: 12, color: '94A3B8' },
-          },
-          indent: { left: 180, right: 120 },
-          children: [
-            new TextRun({
-              text: section.readingPassage,
-              size: 22,
-            }),
-          ],
-        })
-      );
+      const passageLines = splitFormattedLines(section.readingPassage);
+      passageLines.forEach((line, lIdx) => {
+        children.push(
+          new Paragraph({
+            spacing: {
+              before: lIdx === 0 ? 60 : 0,
+              after: lIdx === passageLines.length - 1 ? 140 : 40,
+            },
+            shading: { type: ShadingType.CLEAR, fill: 'F8FAFC', color: 'auto' },
+            border: {
+              left: { style: BorderStyle.SINGLE, size: 12, color: '94A3B8' },
+            },
+            indent: { left: 180, right: 120 },
+            children: [
+              new TextRun({
+                text: line,
+                size: 22,
+                bold: /^Removed options:/i.test(line.trim()),
+              }),
+            ],
+          })
+        );
+      });
     }
 
     for (const q of section.questions) {
@@ -426,15 +440,26 @@ export async function exportHomeworkToDocx(
           })
         );
       } else {
+        const promptLines = splitFormattedLines(q.prompt);
+        const firstLine = promptLines[0] ?? q.prompt;
         children.push(
           new Paragraph({
-            spacing: { before: 80, after: 50 },
+            spacing: { before: 80, after: promptLines.length > 1 ? 30 : 50 },
             children: [
               new TextRun({ text: `${qNum}. `, bold: true, size: 22 }),
-              new TextRun({ text: q.prompt, size: 22 }),
+              new TextRun({ text: firstLine, size: 22 }),
             ],
           })
         );
+        for (let lIdx = 1; lIdx < promptLines.length; lIdx++) {
+          children.push(
+            new Paragraph({
+              spacing: { before: 0, after: lIdx === promptLines.length - 1 ? 50 : 25 },
+              indent: { left: 320 },
+              children: [new TextRun({ text: promptLines[lIdx], size: 22 })],
+            })
+          );
+        }
       }
 
       if (q.imageUrl) {
@@ -444,7 +469,7 @@ export async function exportHomeworkToDocx(
 
       if (isChoiceQuestion(q) && q.options?.length) {
         const optionText = q.options
-          .map((opt, idx) => `${String.fromCharCode(65 + idx)}. ${stripOptionPrefix(opt)}`)
+          .map((opt, idx) => formatMcqOptionDisplay(opt, idx).full)
           .join('          ');
         children.push(
           new Paragraph({

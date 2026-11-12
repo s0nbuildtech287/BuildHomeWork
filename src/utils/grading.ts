@@ -135,3 +135,48 @@ export function gradeHomework(
 export function countHomeworkQuestions(homework: Homework): number {
   return homework.sections.reduce((acc, s) => acc + s.questions.length, 0);
 }
+
+/**
+ * Formats an MCQ option without duplicating single-letter options (e.g. "A" -> "A." instead of "A. A").
+ */
+export function formatMcqOptionDisplay(
+  opt: string,
+  index: number
+): { letter: string; text: string; full: string } {
+  const letter = String.fromCharCode(65 + index);
+  const clean = stripOptionPrefix(opt).trim();
+  if (!clean || clean.toUpperCase() === letter) {
+    return { letter, text: '', full: `${letter}.` };
+  }
+  return { letter, text: clean, full: `${letter}. ${clean}` };
+}
+
+/**
+ * Splits text into clean display lines, automatically breaking inline paragraph-order items (a. ... b. ... c. ... d. ...)
+ * and inline "Removed options: A. ... B. ... C. ... D. ..." onto separate lines.
+ */
+export function splitFormattedLines(text: string): string[] {
+  let normalized = (text || '').replace(/\r\n/g, '\n');
+
+  // If a line has inline "a. ... b. ... c. ... d. ...", break before each item
+  if (/(?:^|\s)a\.\s+[\s\S]*\sb\.\s+[\s\S]*\sc\.\s+/i.test(normalized)) {
+    normalized = normalized
+      .replace(/:\s+(a\.\s+)/gi, ':\n$1')
+      .replace(/\s+(a\.\s+)/g, '\n$1')
+      .replace(/\s+(b\.\s+)/g, '\n$1')
+      .replace(/\s+(c\.\s+)/g, '\n$1')
+      .replace(/\s+(d\.\s+)/g, '\n$1');
+  }
+
+  // If a passage has inline "Removed options: A. ... B. ... C. ... D. ...", break onto separate lines
+  if (/Removed options:/i.test(normalized) && /\bA\.\s+[\s\S]*\bB\.\s+/.test(normalized)) {
+    normalized = normalized
+      .replace(/\s*(Removed options:)\s*/i, '\n$1\n')
+      .replace(/\s+([A-D]\.\s+)/g, '\n$1');
+  }
+
+  return normalized
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line, idx, arr) => line.trim().length > 0 || (idx > 0 && idx < arr.length - 1));
+}

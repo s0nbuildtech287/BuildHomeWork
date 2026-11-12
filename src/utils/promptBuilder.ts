@@ -91,7 +91,7 @@ export function buildHomeworkPrompt(
   }
   if (config.counts.removed_sentences > 0) {
     requestedParts.push(
-      `- "removed_sentences": 1 section Ghép cụm/câu bị lược vào đoạn văn (${config.counts.removed_sentences} câu, type="multiple_choice"): đặt đoạn văn có các chỗ trống đánh số vào "readingPassage" VÀ liệt kê các phương án A, B, C, D tương ứng; instruction ghi chuẩn "Four phrases/sentences have been removed from the text below. For each question, mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks."`
+      `- "removed_sentences": 1 section Ghép cụm/câu bị lược vào đoạn văn (${config.counts.removed_sentences} câu, type="multiple_choice"): đặt đoạn văn có các chỗ trống đánh số (1), (2)... vào "readingPassage"; đặt 4 cụm/câu bị lược vào field "wordBank" dưới dạng ["A. <câu/cụm A>", "B. <câu/cụm B>", "C. <câu/cụm C>", "D. <câu/cụm D>"]; instruction ghi chuẩn "Four phrases/sentences have been removed from the text below. For each question, mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks."; mỗi câu hỏi ghi "prompt": "Question (1)." (hoặc "(1)") và "options": ["A", "B", "C", "D"].`
     );
   }
   if (config.counts.fill_blank > 0) {
@@ -272,7 +272,7 @@ function buildSubjectHomeworkPrompt(
   }
   if (config.counts.removed_sentences > 0) {
     requestedParts.push(
-      `- "removed_sentences": 1 section Ghép cụm/câu bị lược vào đoạn văn (${config.counts.removed_sentences} câu, type="multiple_choice"): đặt đoạn văn có các chỗ trống đánh số vào "readingPassage" VÀ liệt kê các phương án A, B, C, D tương ứng; instruction ghi chuẩn "Four phrases/sentences have been removed from the text below. For each question, mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks."`
+      `- "removed_sentences": 1 section Ghép cụm/câu bị lược vào đoạn văn (${config.counts.removed_sentences} câu, type="multiple_choice"): đặt đoạn văn có các chỗ trống đánh số (1), (2)... vào "readingPassage"; đặt 4 cụm/câu bị lược vào field "wordBank" dưới dạng ["A. <câu/cụm A>", "B. <câu/cụm B>", "C. <câu/cụm C>", "D. <câu/cụm D>"]; instruction ghi chuẩn "Four phrases/sentences have been removed from the text below. For each question, mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks."; mỗi câu hỏi ghi "prompt": "Question (1)." (hoặc "(1)") và "options": ["A", "B", "C", "D"].`
     );
   }
   if (config.counts.true_false_group > 0) {
