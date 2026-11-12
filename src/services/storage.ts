@@ -39,9 +39,15 @@ export function loadGeneratorDraft(): SavedGeneratorDraft {
   try {
     const raw = localStorage.getItem(GENERATOR_DRAFT_KEY);
     if (!raw) {
-      return { config: DEFAULT_GENERATOR_CONFIG, aiMode: 'gemini', textMaterials: [] };
+      return { config: DEFAULT_GENERATOR_CONFIG, aiMode: 'manual_prompt', textMaterials: [] };
     }
     const parsed = JSON.parse(raw);
+    let aiMode: 'gemini' | 'manual_prompt' =
+      parsed.aiMode === 'gemini' ? 'gemini' : 'manual_prompt';
+    if (!localStorage.getItem('bhw_default_manual_v1')) {
+      aiMode = 'manual_prompt';
+      localStorage.setItem('bhw_default_manual_v1', '1');
+    }
     return {
       config: {
         ...DEFAULT_GENERATOR_CONFIG,
@@ -51,11 +57,11 @@ export function loadGeneratorDraft(): SavedGeneratorDraft {
           ...(parsed.config?.counts || {}),
         },
       },
-      aiMode: parsed.aiMode === 'manual_prompt' ? 'manual_prompt' : 'gemini',
+      aiMode,
       textMaterials: Array.isArray(parsed.textMaterials) ? parsed.textMaterials : [],
     };
   } catch {
-    return { config: DEFAULT_GENERATOR_CONFIG, aiMode: 'gemini', textMaterials: [] };
+    return { config: DEFAULT_GENERATOR_CONFIG, aiMode: 'manual_prompt', textMaterials: [] };
   }
 }
 
