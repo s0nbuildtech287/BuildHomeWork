@@ -82,6 +82,7 @@ export interface SectionCountConfig {
   sentence_transform_mcq: number;
   sign_notice: number;
   removed_sentences: number;
+  closest_meaning: number;
   true_false_group: number;
   short_answer: number;
   essay: number;

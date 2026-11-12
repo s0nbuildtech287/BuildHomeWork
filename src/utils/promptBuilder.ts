@@ -64,6 +64,11 @@ export function buildHomeworkPrompt(
       `- "multiple_choice": ${config.counts.multiple_choice} câu trắc nghiệm 4 lựa chọn (instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the correct answer to each of the following questions.", options gồm đúng 4 chuỗi không kèm tiền tố A./B./C./D., correctAnswer ghi chính xác nội dung đáp án đúng).`
     );
   }
+  if (config.counts.closest_meaning > 0) {
+    requestedParts.push(
+      `- "closest_meaning": 1 section Từ đồng nghĩa (${config.counts.closest_meaning} câu, type="multiple_choice"): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word(s) CLOSEST in meaning to the underlined word(s) in each of the following questions.". Mỗi câu "prompt" là 1 câu ngữ cảnh tiếng Anh hoàn chỉnh trong đó từ/cụm từ cần hỏi ĐƯỢC BỌC TRONG THẺ <u>...</u> để gạch chân (ví dụ: "The local artisans are trying to <u>preserve</u> traditional pottery techniques."); "options" là 4 từ/cụm từ tiếng Anh bình thường (không kèm tiền tố A./B./C./D.) để thay thế từ được gạch chân; "correctAnswer" ghi đúng từ đồng nghĩa.`
+    );
+  }
   if (config.counts.announcement_cloze > 0) {
     requestedParts.push(
       `- "announcement_cloze": 1 section Thông báo / Quảng cáo điền từ (type="multiple_choice") gồm 1 mẫu thông báo/tờ rơi ngắn để trong "readingPassage" có ${config.counts.announcement_cloze} chỗ trống đánh số (1), (2)...; instruction ghi chuẩn "Read the following announcement and mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks." kèm ${config.counts.announcement_cloze} câu hỏi A/B/C/D.`
@@ -243,6 +248,11 @@ function buildSubjectHomeworkPrompt(
   if (config.counts.multiple_choice > 0) {
     requestedParts.push(
       `- "multiple_choice": ${config.counts.multiple_choice} câu trắc nghiệm 4 lựa chọn (instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the correct answer to each of the following questions.", options gồm đúng 4 chuỗi không kèm tiền tố A./B./C./D., correctAnswer ghi chính xác nội dung đáp án đúng).`
+    );
+  }
+  if (config.counts.closest_meaning > 0) {
+    requestedParts.push(
+      `- "closest_meaning": 1 section Từ đồng nghĩa (${config.counts.closest_meaning} câu, type="multiple_choice"): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word(s) CLOSEST in meaning to the underlined word(s) in each of the following questions.". Mỗi câu "prompt" là 1 câu ngữ cảnh tiếng Anh hoàn chỉnh trong đó từ/cụm từ cần hỏi ĐƯỢC BỌC TRONG THẺ <u>...</u> để gạch chân (ví dụ: "The local artisans are trying to <u>preserve</u> traditional pottery techniques."); "options" là 4 từ/cụm từ tiếng Anh bình thường (không kèm tiền tố A./B./C./D.) để thay thế từ được gạch chân; "correctAnswer" ghi đúng từ đồng nghĩa.`
     );
   }
   if (config.counts.announcement_cloze > 0) {

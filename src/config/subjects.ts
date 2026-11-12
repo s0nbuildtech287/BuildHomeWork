@@ -64,6 +64,7 @@ export const SUBJECT_LIST: SubjectDefinition[] = [
     questionOptions: [
       { key: 'pronunciation_stress', label: 'Phát âm & Trọng âm', desc: 'Tìm âm khác biệt & trọng âm (A/B/C/D)' },
       { key: 'multiple_choice', label: 'Trắc nghiệm (A/B/C/D)', desc: 'Ngữ pháp, từ vựng, giao tiếp' },
+      { key: 'closest_meaning', label: 'Từ đồng nghĩa (CLOSEST in meaning)', desc: 'Câu ngữ cảnh có từ gạch chân + 4 đáp án A/B/C/D' },
       { key: 'announcement_cloze', label: 'Thông báo / Quảng cáo điền từ', desc: '1 tờ rơi/thông báo + câu hỏi A/B/C/D' },
       { key: 'paragraph_order', label: 'Sắp xếp đoạn văn (a-b-c-d)', desc: 'Chọn thứ tự đúng các câu thành đoạn' },
       { key: 'guided_cloze', label: 'Đọc điền đoạn văn (Cloze)', desc: '1 đoạn văn + các chỗ trống A/B/C/D' },
@@ -348,6 +349,7 @@ export function createEmptyCounts(): SectionCountConfig {
     sentence_transform_mcq: 0,
     sign_notice: 0,
     removed_sentences: 0,
+    closest_meaning: 0,
     true_false_group: 0,
     short_answer: 0,
     essay: 0,

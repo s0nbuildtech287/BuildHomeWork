@@ -14,6 +14,7 @@ import {
   TableCell,
   TableRow,
   TextRun,
+  UnderlineType,
   WidthType,
 } from 'docx';
 import { saveAs } from 'file-saver';
@@ -161,6 +162,30 @@ function buildBrandBarTable(
       }),
     ],
   });
+}
+
+function buildPromptTextRuns(text: string, size = 22): TextRun[] {
+  if (!text || !text.includes('<u>')) {
+    return [new TextRun({ text, size })];
+  }
+  const parts = text.split(/(<u>[\s\S]*?<\/u>)/gi);
+  const runs: TextRun[] = [];
+  for (const part of parts) {
+    if (!part) continue;
+    const match = part.match(/^<u>([\s\S]*?)<\/u>$/i);
+    if (match) {
+      runs.push(
+        new TextRun({
+          text: match[1],
+          size,
+          underline: { type: UnderlineType.SINGLE },
+        })
+      );
+    } else {
+      runs.push(new TextRun({ text: part, size }));
+    }
+  }
+  return runs.length > 0 ? runs : [new TextRun({ text, size })];
 }
 
 function buildAlignedOptionsElements(options: string[]): Array<Paragraph | Table> {
@@ -517,7 +542,7 @@ export async function exportHomeworkToDocx(
             spacing: { before: 80, after: promptLines.length > 1 ? 30 : 50 },
             children: [
               new TextRun({ text: `${qNum}. `, bold: true, size: 22 }),
-              new TextRun({ text: firstLine, size: 22 }),
+              ...buildPromptTextRuns(firstLine, 22),
             ],
           })
         );
@@ -526,7 +551,7 @@ export async function exportHomeworkToDocx(
             new Paragraph({
               spacing: { before: 0, after: lIdx === promptLines.length - 1 ? 50 : 25 },
               indent: { left: 320 },
-              children: [new TextRun({ text: promptLines[lIdx], size: 22 })],
+              children: buildPromptTextRuns(promptLines[lIdx], 22),
             })
           );
         }

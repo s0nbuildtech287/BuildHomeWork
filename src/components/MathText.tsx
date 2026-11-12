@@ -52,18 +52,34 @@ function renderKatexHtml(expr: string, displayMode: boolean): string | null {
   }
 }
 
+function renderPlainWithUnderline(text: string): React.ReactNode {
+  if (!text || !text.includes('<u>')) return text;
+  const parts = text.split(/(<u>[\s\S]*?<\/u>)/gi);
+  return parts.map((part, i) => {
+    const match = part.match(/^<u>([\s\S]*?)<\/u>$/i);
+    if (match) {
+      return (
+        <u key={i} className="underline decoration-slate-800 underline-offset-2">
+          {match[1]}
+        </u>
+      );
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>;
+  });
+}
+
 export const MathText: React.FC<MathTextProps> = ({ text, className }) => {
   const segments = useMemo(() => splitMathSegments(text), [text]);
 
   if (segments.length === 1 && segments[0].kind === 'text') {
-    return <span className={className}>{text}</span>;
+    return <span className={className}>{renderPlainWithUnderline(text)}</span>;
   }
 
   return (
     <span className={className}>
       {segments.map((seg, idx) => {
         if (seg.kind === 'text') {
-          return <React.Fragment key={idx}>{seg.content}</React.Fragment>;
+          return <React.Fragment key={idx}>{renderPlainWithUnderline(seg.content)}</React.Fragment>;
         }
         const html = renderKatexHtml(seg.content, seg.kind === 'block');
         if (!html) {
