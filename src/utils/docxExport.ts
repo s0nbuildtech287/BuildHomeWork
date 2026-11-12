@@ -2,9 +2,12 @@ import {
   AlignmentType,
   BorderStyle,
   Document,
+  Footer,
+  Header,
   ImageRun,
   Packer,
   PageBreak,
+  PageNumber,
   Paragraph,
   ShadingType,
   Table,
@@ -14,7 +17,8 @@ import {
   WidthType,
 } from 'docx';
 import { saveAs } from 'file-saver';
-import { Homework } from '../types';
+import { AppSettings, Homework } from '../types';
+import { loadSettings } from '../services/storage';
 import { isChoiceQuestion, isEssayQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from './grading';
 
 export type DocxExportMode = 'student' | 'student_with_key' | 'teacher';
@@ -82,10 +86,82 @@ function safeFileName(title: string): string {
   );
 }
 
+function buildBrandBarTable(
+  leftText: string,
+  rightChildren: Array<TextRun>,
+  fillColor: string,
+  options: { bold?: boolean; size?: number; leftPercent?: number; rightPercent?: number } = {}
+): Table {
+  const { bold = false, size = 20, leftPercent = 60, rightPercent = 40 } = options;
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: fillColor };
+  const cellBorders = {
+    top: noBorder,
+    bottom: noBorder,
+    left: noBorder,
+    right: noBorder,
+  };
+  const cellMargins = { top: 45, bottom: 45, left: 100, right: 100 };
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: noBorder,
+      bottom: noBorder,
+      left: noBorder,
+      right: noBorder,
+      insideHorizontal: noBorder,
+      insideVertical: noBorder,
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: leftPercent, type: WidthType.PERCENTAGE },
+            borders: cellBorders,
+            margins: cellMargins,
+            shading: { type: ShadingType.CLEAR, color: 'auto', fill: fillColor },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new TextRun({
+                    text: leftText,
+                    font: 'Times New Roman',
+                    bold,
+                    italics: true,
+                    size,
+                    color: 'FFFFFF',
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: rightPercent, type: WidthType.PERCENTAGE },
+            borders: cellBorders,
+            margins: cellMargins,
+            shading: { type: ShadingType.CLEAR, color: 'auto', fill: fillColor },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { before: 0, after: 0 },
+                children: rightChildren,
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 export async function exportHomeworkToDocx(
   homework: Homework,
-  mode: DocxExportMode = 'student_with_key'
+  mode: DocxExportMode = 'student_with_key',
+  customSettings?: AppSettings
 ): Promise<void> {
+  const settings = customSettings || loadSettings();
   const children: Array<Paragraph | Table> = [];
 
   // Header Banner: Center / Teacher Name
@@ -507,19 +583,63 @@ export async function exportHomeworkToDocx(
     }
   }
 
+  const useBrandBar = settings.enableBrandHeaderFooter !== false;
+  const barColor = (settings.headerFooterColor || '7075B8').replace(/^#/, '');
+  const headerLeftText = settings.headerLeft?.trim() || 'MS. HUONG - 0327161636';
+  const headerRightText = settings.headerRight?.trim() || 'T-CLASS EDUCATION - 0978386622';
+  const footerLeftText =
+    settings.footerLeft?.trim() ||
+    'T-CLASS EDUCATION - Số nhà 9,12,14-16 Ngõ 71 Khu Dịch vụ 3, Văn Phú, Hà Đông, HN';
+
+  const headerBar = buildBrandBarTable(
+    headerLeftText,
+    [
+      new TextRun({
+        text: headerRightText,
+        font: 'Times New Roman',
+        bold: true,
+        italics: true,
+        size: 20,
+        color: 'FFFFFF',
+      }),
+    ],
+    barColor,
+    { bold: true, size: 20, leftPercent: 50, rightPercent: 50 }
+  );
+
+  const footerBar = buildBrandBarTable(
+    footerLeftText,
+    [
+      new TextRun({
+        children: ['Page | ', PageNumber.CURRENT],
+        font: 'Times New Roman',
+        bold: false,
+        italics: true,
+        size: 19,
+        color: 'FFFFFF',
+      }),
+    ],
+    barColor,
+    { bold: false, size: 19, leftPercent: 82, rightPercent: 18 }
+  );
+
   const doc = new Document({
     sections: [
       {
         properties: {
           page: {
             margin: {
-              top: 900,
-              bottom: 900,
+              top: useBrandBar ? 1050 : 900,
+              bottom: useBrandBar ? 1050 : 900,
               left: 1000,
               right: 1000,
+              header: 450,
+              footer: 450,
             },
           },
         },
+        headers: useBrandBar ? { default: new Header({ children: [headerBar] }) } : undefined,
+        footers: useBrandBar ? { default: new Footer({ children: [footerBar] }) } : undefined,
         children,
       },
     ],

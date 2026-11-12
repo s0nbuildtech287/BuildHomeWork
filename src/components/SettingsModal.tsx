@@ -72,6 +72,73 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-sm font-semibold text-slate-800">
+                  Header &amp; Footer khi xuất Word / PDF
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  In thanh tiêu đề trên &amp; dưới mọi trang khi tải file Word (.docx)
+                </p>
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-indigo-700">
+                <input
+                  type="checkbox"
+                  checked={form.enableBrandHeaderFooter !== false}
+                  onChange={(e) =>
+                    setForm({ ...form, enableBrandHeaderFooter: e.target.checked })
+                  }
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                Bật
+              </label>
+            </div>
+
+            {form.enableBrandHeaderFooter !== false && (
+              <div className="space-y-2 pt-1">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-slate-600">
+                      Header trái
+                    </label>
+                    <input
+                      type="text"
+                      value={form.headerLeft ?? ''}
+                      onChange={(e) => setForm({ ...form, headerLeft: e.target.value })}
+                      placeholder="MS. HUONG - 0327161636"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-slate-600">
+                      Header phải
+                    </label>
+                    <input
+                      type="text"
+                      value={form.headerRight ?? ''}
+                      onChange={(e) => setForm({ ...form, headerRight: e.target.value })}
+                      placeholder="T-CLASS EDUCATION - 0978386622"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-medium text-slate-600">
+                    Footer trái (bên phải tự động đánh số Page | 1, 2, 3...)
+                  </label>
+                  <input
+                    type="text"
+                    value={form.footerLeft ?? ''}
+                    onChange={(e) => setForm({ ...form, footerLeft: e.target.value })}
+                    placeholder="T-CLASS EDUCATION - Số nhà 9,12,14-16 Ngõ 71 Khu Dịch vụ 3, Văn Phú, Hà Đông, HN"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="border-t border-slate-100 pt-2">
             <button
               type="button"

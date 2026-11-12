@@ -181,7 +181,7 @@ YÊU CẦU CẤU TRÚC CÁC PHẦN:
 ${requestedParts.length > 0 ? requestedParts.join('\n') : '- Tạo các phần bài tập theo đúng yêu cầu bổ sung của giáo viên ở trên.'}
 
 QUY ĐỊNH ĐỊNH DẠNG ĐẦU RA (BẮT BUỘC):
-Chỉ trả về DUY NHẤT một khối JSON hợp lệ (không giải thích thừa ngoài JSON), tuân thủ schema sau:
+Chỉ trả về DUY NHẤT một khối JSON hợp lệ đặt bên trong code block \`\`\`json ... \`\`\` (để người dùng bấm nút Copy 1 chạm; không viết lời dẫn/giải thích ngoài code block, tuyệt đối không thêm dấu \\ ở cuối dòng hay ký tự HTML như &#x20;), tuân thủ schema sau:
 {
   "title": "Tên bài tập tiếng Anh ngắn gọn (VD: Homework - Unit 4: Present Continuous)",
   "subtitle": "Mô tả ngắn bằng tiếng Việt (VD: Ôn tập thì Hiện tại tiếp diễn & Từ vựng thời tiết)",
@@ -358,7 +358,7 @@ ${stemRule}
 ${stepByStepRule}
 
 YÊU CẦU ĐỊNH DẠNG ĐẦU RA (BẮT BUỘC):
-Chỉ trả về DUY NHẤT một JSON object hợp lệ (không giải thích ngoài lề) theo đúng schema sau:
+Chỉ trả về DUY NHẤT một JSON object hợp lệ đặt bên trong code block \`\`\`json ... \`\`\` (để người dùng bấm nút Copy 1 chạm; không viết giải thích ngoài code block, không thêm dấu \\ ở cuối dòng hay ký tự HTML như &#x20;) theo đúng schema sau:
 {
   "title": "Phiếu Bài Tập ${subjectDef.name} - ...",
   "subtitle": "Chủ đề: ...",
@@ -422,7 +422,15 @@ export function parseAiHomeworkResponse(
     centerName?: string;
   }
 ): Homework {
-  let cleaned = (rawText || '').trim();
+  let cleaned = (rawText || '')
+    .replace(/&#x20;|&#32;|&nbsp;|\u00a0/gi, ' ')
+    .replace(/&quot;|&#34;/gi, '"')
+    .replace(/&apos;|&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&amp;/gi, '&')
+    .replace(/\\\r?\n/g, '\n')
+    .trim();
 
   // Strip ```json ... ``` or ``` ... ```
   const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -436,6 +444,9 @@ export function parseAiHomeworkResponse(
   if (firstBrace >= 0 && lastBrace > firstBrace) {
     cleaned = cleaned.slice(firstBrace, lastBrace + 1);
   }
+
+  // Clean trailing commas before } or ] just in case
+  cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
 
   let parsed: Record<string, unknown>;
   try {

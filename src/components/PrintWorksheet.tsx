@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { MathText } from './MathText';
 import { Homework } from '../types';
+import { loadSettings } from '../services/storage';
 import { isChoiceQuestion, isEssayQuestion, resolveCorrectOptionIndex, stripOptionPrefix } from '../utils/grading';
 
 interface PrintWorksheetProps {
@@ -13,6 +14,14 @@ type PrintMode = 'student' | 'student_with_key' | 'teacher';
 
 export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack }) => {
   const [mode, setMode] = useState<PrintMode>('student_with_key');
+  const settings = loadSettings();
+  const useBrandBar = settings.enableBrandHeaderFooter !== false;
+  const barColor = `#${(settings.headerFooterColor || '7075B8').replace(/^#/, '')}`;
+  const headerLeft = settings.headerLeft?.trim() || 'MS. HUONG - 0327161636';
+  const headerRight = settings.headerRight?.trim() || 'T-CLASS EDUCATION - 0978386622';
+  const footerLeft =
+    settings.footerLeft?.trim() ||
+    'T-CLASS EDUCATION - Số nhà 9,12,14-16 Ngõ 71 Khu Dịch vụ 3, Văn Phú, Hà Đông, HN';
 
   let questionCounter = 1;
   const answerSummary: Array<{ num: number; answer: string; explanation: string }> = [];
@@ -57,6 +66,19 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
 
       {/* A4 Worksheet Canvas */}
       <div className="print-only-container font-worksheet mx-auto mt-6 max-w-[210mm] rounded-xl border border-slate-200 bg-white p-10 shadow-md">
+        {useBrandBar && (
+          <div
+            className="mb-4 flex items-center justify-between px-3 py-1 font-serif text-xs font-bold italic text-white"
+            style={{
+              backgroundColor: barColor,
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+            }}
+          >
+            <span>{headerLeft}</span>
+            <span>{headerRight}</span>
+          </div>
+        )}
         {(homework.centerName || homework.teacherName) && (
           <div className="mb-1 text-center text-xs font-semibold tracking-wide text-slate-500 uppercase">
             {[homework.centerName, homework.teacherName ? `GV: ${homework.teacherName}` : '']
@@ -238,6 +260,20 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {useBrandBar && (
+          <div
+            className="mt-8 flex items-center justify-between px-3 py-1 font-serif text-[11px] italic text-white"
+            style={{
+              backgroundColor: barColor,
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+            }}
+          >
+            <span>{footerLeft}</span>
+            <span>Page | 1</span>
           </div>
         )}
       </div>

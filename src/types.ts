@@ -108,6 +108,11 @@ export interface AppSettings {
   geminiModel: string;
   teacherName: string;
   centerName: string;
+  enableBrandHeaderFooter?: boolean;
+  headerLeft?: string;
+  headerRight?: string;
+  footerLeft?: string;
+  headerFooterColor?: string;
 }
 
 export interface GradedQuestionResult {

@@ -115,6 +115,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   geminiModel: 'gemini-3.8-flash',
   teacherName: '',
   centerName: '',
+  enableBrandHeaderFooter: true,
+  headerLeft: 'MS. HUONG - 0327161636',
+  headerRight: 'T-CLASS EDUCATION - 0978386622',
+  footerLeft: 'T-CLASS EDUCATION - Số nhà 9,12,14-16 Ngõ 71 Khu Dịch vụ 3, Văn Phú, Hà Đông, HN',
+  headerFooterColor: '7075B8',
 };
 
 export function loadSettings(): AppSettings {
