@@ -52,7 +52,7 @@ export function buildHomeworkPrompt(
     requestedParts.push(
       `- "pronunciation_stress": Tạo ${pronCount > 0 && stressCount > 0 ? '2 section' : '1 section'} (type="multiple_choice"):` +
         (pronCount > 0
-          ? `\n  + Section Phát âm (${pronCount} câu): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word whose underlined part differs from the other three in pronunciation in each of the following questions." Trong "options" đánh dấu phần âm cần xét bằng dấu ngoặc vuông, ví dụ ["occ[u]py", "obs[e]rve", "pr[o]mote", "c[u]stom"].`
+          ? `\n  + Section Phát âm (${pronCount} câu): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word whose underlined part differs from the other three in pronunciation in each of the following questions." Trong "options" chỉ ghi 4 từ tiếng Anh bình thường (không thêm dấu ngoặc vuông hay ký hiệu đặc biệt), ví dụ ["occupy", "observe", "promote", "custom"].`
           : '') +
         (stressCount > 0
           ? `\n  + Section Trọng âm (${stressCount} câu): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word that differs from the other three in the position of primary stress in each of the following questions."`
@@ -233,7 +233,7 @@ function buildSubjectHomeworkPrompt(
     requestedParts.push(
       `- "pronunciation_stress": Tạo ${pronCount > 0 && stressCount > 0 ? '2 section' : '1 section'} (type="multiple_choice"):` +
         (pronCount > 0
-          ? `\n  + Section Phát âm (${pronCount} câu): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word whose underlined part differs from the other three in pronunciation in each of the following questions." Trong "options" đánh dấu phần âm cần xét bằng dấu ngoặc vuông, ví dụ ["occ[u]py", "obs[e]rve", "pr[o]mote", "c[u]stom"].`
+          ? `\n  + Section Phát âm (${pronCount} câu): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word whose underlined part differs from the other three in pronunciation in each of the following questions." Trong "options" chỉ ghi 4 từ tiếng Anh bình thường (không thêm dấu ngoặc vuông hay ký hiệu đặc biệt), ví dụ ["occupy", "observe", "promote", "custom"].`
           : '') +
         (stressCount > 0
           ? `\n  + Section Trọng âm (${stressCount} câu): instruction ghi chuẩn "Mark the letter A, B, C or D on your answer sheet to indicate the word that differs from the other three in the position of primary stress in each of the following questions."`
