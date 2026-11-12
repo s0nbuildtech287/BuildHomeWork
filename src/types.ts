@@ -123,3 +123,13 @@ export interface StudentSubmission {
   answers: Record<string, string>;
   results: GradedQuestionResult[];
 }
+
+export interface ReferenceSource {
+  id: string;
+  subject: SubjectId;
+  title: string;
+  url?: string;
+  tags?: string;
+  content: string;
+  createdAt: string;
+}

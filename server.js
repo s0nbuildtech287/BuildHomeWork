@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { fetchAndExtractSource } from './api/_htmlExtractor.js';
+import { fetchSubjectNewsFeed } from './api/_feedFetcher.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -336,6 +338,31 @@ app.get('/api/homeworks', (_req, res) => {
     homeworks: db.homeworks,
     submissionCounts,
   });
+});
+
+app.get('/api/feed-sources', async (req, res) => {
+  const subject = typeof req.query?.subject === 'string' ? req.query.subject : 'all';
+  try {
+    const items = await fetchSubjectNewsFeed(subject);
+    return res.json({ items });
+  } catch (err) {
+    return res.status(500).json({
+      error: err?.message || 'Không tải được bảng tin nguồn tham khảo.',
+    });
+  }
+});
+
+app.post('/api/fetch-source', async (req, res) => {
+  const { url } = req.body || {};
+  try {
+    const result = await fetchAndExtractSource(url);
+    return res.json(result);
+  } catch (err) {
+    const status = err?.status || 500;
+    return res.status(status).json({
+      error: err?.message || 'Không lấy được nội dung từ đường dẫn này.',
+    });
+  }
 });
 
 app.post('/api/homeworks', (req, res) => {

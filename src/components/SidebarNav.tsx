@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Atom,
+  BookMarked,
   BookOpenText,
   Calculator,
   FlaskConical,
@@ -16,13 +17,15 @@ import { SubjectId } from '../types';
 import { BrandLogo } from './BrandLogo';
 
 interface SidebarNavProps {
-  activePage: 'generate' | 'library' | 'editor';
+  activePage: 'generate' | 'library' | 'editor' | 'sources';
   activeSubject: SubjectId;
   homeworkCount: number;
+  sourceCount: number;
   mobileOpen: boolean;
   onCloseMobile: () => void;
   onSelectSubject: (subject: SubjectId) => void;
   onOpenLibrary: () => void;
+  onOpenSources: () => void;
   onOpenSettings: () => void;
 }
 
@@ -40,10 +43,12 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   activePage,
   activeSubject,
   homeworkCount,
+  sourceCount,
   mobileOpen,
   onCloseMobile,
   onSelectSubject,
   onOpenLibrary,
+  onOpenSources,
   onOpenSettings,
 }) => {
   const navContent = (
@@ -161,6 +166,41 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
               }`}
             >
               {homeworkCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onOpenSources();
+              onCloseMobile();
+            }}
+            className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition ${
+              activePage === 'sources'
+                ? 'bg-indigo-50 font-bold text-indigo-700 ring-1 ring-indigo-200/80'
+                : 'font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            }`}
+          >
+            <span className="flex items-center gap-3 text-sm">
+              <span
+                className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                  activePage === 'sources'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-500'
+                }`}
+              >
+                <BookMarked className="h-4 w-4" />
+              </span>
+              Nguồn tham khảo
+            </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                activePage === 'sources'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {sourceCount}
             </span>
           </button>
         </nav>

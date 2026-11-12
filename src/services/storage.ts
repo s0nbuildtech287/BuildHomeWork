@@ -1,4 +1,4 @@
-import { AppSettings, GeneratorConfig, Homework, StudentSubmission, SubjectId } from '../types';
+import { AppSettings, GeneratorConfig, Homework, ReferenceSource, StudentSubmission, SubjectId } from '../types';
 import { getDefaultCountsForSubject, getSubjectDefinition } from '../config/subjects';
 import { AttachedMaterial } from '../utils/fileExtractor';
 
@@ -239,5 +239,42 @@ export function saveLocalSubmission(sub: StudentSubmission): void {
   } catch {
     // ignore
   }
+}
+
+const SOURCES_KEY = 'bhw_reference_sources_v1';
+
+export function loadSources(): ReferenceSource[] {
+  try {
+    const raw = localStorage.getItem(SOURCES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveSourceItem(source: ReferenceSource): ReferenceSource[] {
+  const current = loadSources();
+  const idx = current.findIndex((s) => s.id === source.id);
+  const next =
+    idx >= 0
+      ? current.map((s) => (s.id === source.id ? source : s))
+      : [source, ...current];
+  try {
+    localStorage.setItem(SOURCES_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+  return next;
+}
+
+export function deleteSourceItem(id: string): ReferenceSource[] {
+  const next = loadSources().filter((s) => s.id !== id);
+  try {
+    localStorage.setItem(SOURCES_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+  return next;
 }
 
