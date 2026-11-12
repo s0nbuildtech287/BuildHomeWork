@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { createEmptyCounts, getSubjectDefinition, SubjectTemplate } from '../config/subjects';
 import { GeneratorRightPanel } from './GeneratorRightPanel';
+import { VocabQuizModal } from './VocabQuizModal';
 import { attachAudioToListeningSections, generateHomeworkWithGemini } from '../services/gemini';
 import {
   AppSettings,
@@ -92,6 +93,7 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [showVocabModal, setShowVocabModal] = useState(false);
   const [listeningMenuOpen, setListeningMenuOpen] = useState(false);
   const subjectDef = useMemo(() => getSubjectDefinition(config.subject), [config.subject]);
 
@@ -724,13 +726,23 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
               Đề thi chuẩn (50 câu)
             </button>
             {(config.subject || 'english') === 'english' && (
-              <button
-                type="button"
-                onClick={() => applyPresetCounts('gs40')}
-                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
-              >
-                Form Vào 10 / GS (40 câu)
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowVocabModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-700 shadow-2xs hover:bg-purple-100"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-purple-600" />
+                  Kiểm tra từ vựng (Dán bảng YourHomework)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPresetCounts('gs40')}
+                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                >
+                  Form Vào 10 / GS (40 câu)
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -980,6 +992,22 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({
         recentHomeworks={recentHomeworks}
         onApplyTemplate={handleApplyTemplate}
         onOpenHomework={(hw) => onOpenHomework?.(hw)}
+      />
+
+      <VocabQuizModal
+        isOpen={showVocabModal}
+        onClose={() => setShowVocabModal(false)}
+        onApply={({ vocabularyFocus, topicName, counts }) => {
+          setConfig((prev) => ({
+            ...prev,
+            topic: topicName ? `Kiểm tra từ vựng - ${topicName}` : prev.topic || 'Kiểm tra từ vựng',
+            vocabularyFocus,
+            counts: {
+              ...createEmptyCounts(),
+              ...counts,
+            },
+          }));
+        }}
       />
     </div>
   );
