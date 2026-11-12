@@ -200,11 +200,20 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                         </div>
                       )}
 
-                      {isChoiceQuestion(q) && q.options?.length && (
-                        <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1 pl-5 sm:grid-cols-4">
-                          {q.options.map((opt, idx) => {
-                            const formatted = formatMcqOptionDisplay(opt, idx);
-                            return (
+                      {isChoiceQuestion(q) && q.options?.length && (() => {
+                        const formattedList = q.options.map((opt, idx) =>
+                          formatMcqOptionDisplay(opt, idx)
+                        );
+                        const maxLen = Math.max(...formattedList.map((x) => x.full.length), 0);
+                        const gridCls =
+                          maxLen > 38
+                            ? 'grid-cols-1'
+                            : maxLen <= 16 && formattedList.length === 4
+                              ? 'grid-cols-4'
+                              : 'grid-cols-2';
+                        return (
+                          <div className={`mt-1 grid ${gridCls} gap-x-6 gap-y-1 pl-5`}>
+                            {formattedList.map((formatted, idx) => (
                               <span key={idx}>
                                 <strong>{formatted.letter}.</strong>
                                 {formatted.text ? (
@@ -214,10 +223,10 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                                   </>
                                 ) : null}
                               </span>
-                            );
-                          })}
-                        </div>
-                      )}
+                            ))}
+                          </div>
+                        );
+                      })()}
 
                       {q.type === 'rewrite' && !q.prompt.includes('____') && (
                         <p className="mt-1 pl-5 text-slate-500">

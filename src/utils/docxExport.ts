@@ -163,6 +163,76 @@ function buildBrandBarTable(
   });
 }
 
+function buildAlignedOptionsElements(options: string[]): Array<Paragraph | Table> {
+  const formatted = options.map((opt, idx) => formatMcqOptionDisplay(opt, idx));
+  const maxLen = Math.max(...formatted.map((x) => x.full.length), 0);
+
+  // Long options (> 38 chars): 1 option per line, cleanly indented
+  if (maxLen > 38) {
+    return formatted.map(
+      (item, idx) =>
+        new Paragraph({
+          spacing: { before: 0, after: idx === formatted.length - 1 ? 90 : 30 },
+          indent: { left: 320 },
+          children: [
+            new TextRun({ text: `${item.letter}.`, bold: true, size: 21 }),
+            ...(item.text ? [new TextRun({ text: ` ${item.text}`, size: 21 })] : []),
+          ],
+        })
+    );
+  }
+
+  // Short (<= 16 chars, 4 items): 1 row x 4 equal columns (25% each)
+  // Medium (17..38 chars): 2 rows x 2 equal columns (50% each)
+  const cols = maxLen <= 16 && formatted.length === 4 ? 4 : 2;
+  const colWidthPct = Math.floor(100 / cols);
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const cellBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+  const rows: TableRow[] = [];
+  for (let r = 0; r < formatted.length; r += cols) {
+    const rowCells: TableCell[] = [];
+    for (let c = 0; c < cols; c++) {
+      const item = formatted[r + c];
+      rowCells.push(
+        new TableCell({
+          width: { size: colWidthPct, type: WidthType.PERCENTAGE },
+          borders: cellBorders,
+          margins: { top: 20, bottom: 30, left: c === 0 ? 320 : 80, right: 80 },
+          children: item
+            ? [
+                new Paragraph({
+                  spacing: { before: 0, after: 0 },
+                  children: [
+                    new TextRun({ text: `${item.letter}.`, bold: true, size: 21 }),
+                    ...(item.text ? [new TextRun({ text: ` ${item.text}`, size: 21 })] : []),
+                  ],
+                }),
+              ]
+            : [new Paragraph({ spacing: { before: 0, after: 0 }, children: [] })],
+        })
+      );
+    }
+    rows.push(new TableRow({ children: rowCells }));
+  }
+
+  return [
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: noBorder,
+        bottom: noBorder,
+        left: noBorder,
+        right: noBorder,
+        insideHorizontal: noBorder,
+        insideVertical: noBorder,
+      },
+      rows,
+    }),
+    new Paragraph({ spacing: { before: 0, after: 60 }, children: [] }),
+  ];
+}
+
 export async function exportHomeworkToDocx(
   homework: Homework,
   mode: DocxExportMode = 'student_with_key',
@@ -468,16 +538,7 @@ export async function exportHomeworkToDocx(
       }
 
       if (isChoiceQuestion(q) && q.options?.length) {
-        const optionText = q.options
-          .map((opt, idx) => formatMcqOptionDisplay(opt, idx).full)
-          .join('          ');
-        children.push(
-          new Paragraph({
-            spacing: { after: 90 },
-            indent: { left: 320 },
-            children: [new TextRun({ text: optionText, size: 21 })],
-          })
-        );
+        children.push(...buildAlignedOptionsElements(q.options));
       }
 
       if (q.type === 'rewrite' && !q.prompt.includes('____')) {
