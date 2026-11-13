@@ -234,7 +234,8 @@ LƯU Ý QUAN TRỌNG:
 2. Field "type" bắt buộc chọn đúng 1 trong các giá trị: "multiple_choice", "fill_blank", "word_form", "sentence_order", "rewrite", "find_mistake", "writing" (ví dụ: Tìm lỗi sai dùng "find_mistake", Bài viết dùng "writing").
 3. Mỗi câu chỉ có 1 đáp án chính xác rõ ràng (hoặc ghi các biến thể chấp nhận được cách nhau bởi " | " cho câu điền từ/viết lại câu).
 4. Mọi câu đều phải có "explanation" bằng tiếng Việt súc tích, ngắn gọn (1 câu rõ ý để đảm bảo đủ dung lượng khi tạo đề dài 30-50 câu).
-5. Đảm bảo JSON hợp lệ hoàn toàn (escape dấu ngoặc kép nếu có trong chuỗi).`;
+5. Đảm bảo JSON hợp lệ hoàn toàn (escape dấu ngoặc kép nếu có trong chuỗi).
+6. ĐẢO ĐỀ & PHÂN BỐ ĐÁP ÁN: Vị trí đáp án đúng trong mảng "options" PHẢI ĐƯỢC ĐẢO LỘN NGẪU NHIÊN ĐỀU giữa A, B, C, D (khoảng 25% A, 25% B, 25% C, 25% D). TUYỆT ĐỐI KHÔNG ĐỂ đáp án đúng luôn nằm ở vị trí đầu tiên (A).`;
 }
 
 function buildSubjectHomeworkPrompt(
@@ -430,7 +431,8 @@ LƯU Ý QUAN TRỌNG:
 1. Tạo ĐÚNG VÀ ĐỦ số lượng câu hỏi đã yêu cầu ở từng phần.
 2. Field "type" bắt buộc chọn 1 trong các giá trị: "multiple_choice", "fill_blank", "short_answer", "essay", "writing".
 3. Nếu dùng công thức LaTeX trong chuỗi JSON, nhớ escape dấu gạch chéo ngược thành hai dấu (ví dụ: "\\\\frac{1}{2}", "\\\\sqrt{x}").
-4. Đảm bảo JSON hợp lệ hoàn toàn.`;
+4. Đảm bảo JSON hợp lệ hoàn toàn.
+5. ĐẢO ĐỀ & PHÂN BỐ ĐÁP ÁN: Vị trí đáp án đúng trong mảng "options" PHẢI ĐƯỢC ĐẢO LỘN NGẪU NHIÊN ĐỀU giữa A, B, C, D (khoảng 25% A, 25% B, 25% C, 25% D). TUYỆT ĐỐI KHÔNG ĐỂ đáp án đúng luôn nằm ở vị trí đầu tiên (A).`;
 }
 
 function normalizeQuestionType(raw: unknown, fallback: QuestionType): QuestionType {
@@ -541,6 +543,30 @@ export function parseAiHomeworkResponse(
             }
           }
 
+          let finalOptions = options;
+          if (
+            (qType === 'multiple_choice' || qType === 'find_mistake') &&
+            options &&
+            options.length >= 2
+          ) {
+            const isLetterList = options.every(
+              (o, i) => o.trim().toUpperCase() === String.fromCharCode(65 + i)
+            );
+            const hasPositionalDependency = options.some((o) =>
+              /(?:tất cả|all of the above|cả [A-D]|both [A-D]|neither [A-D])/i.test(o)
+            );
+
+            if (!isLetterList && !hasPositionalDependency) {
+              // Shuffle options randomly to distribute correct answers evenly across A, B, C, D
+              const shuffled = [...options];
+              for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+              }
+              finalOptions = shuffled;
+            }
+          }
+
           const prompt = String(q.prompt ?? '').trim();
           if (!prompt && (!words || words.length === 0)) return null;
 
@@ -548,7 +574,7 @@ export function parseAiHomeworkResponse(
             id: createId(`q${sIdx}_${qIdx}`),
             type: qType,
             prompt: prompt || 'Arrange the words to make a correct sentence.',
-            options: options && options.length > 0 ? options : undefined,
+            options: finalOptions && finalOptions.length > 0 ? finalOptions : undefined,
             words: words && words.length > 0 ? words : undefined,
             hint: q.hint ? String(q.hint).trim() : undefined,
             correctAnswer,

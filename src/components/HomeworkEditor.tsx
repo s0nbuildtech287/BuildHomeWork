@@ -60,6 +60,51 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
   const [showAnswersInEditor, setShowAnswersInEditor] = useState(true);
   const [docxMode, setDocxMode] = useState<DocxExportMode>('student_with_key');
   const [copiedKey, setCopiedKey] = useState<'server' | 'standalone' | null>(null);
+  const [shuffledNotice, setShuffledNotice] = useState(false);
+
+  const handleShuffleOptions = () => {
+    let countShuffled = 0;
+    setDraft((prev) => ({
+      ...prev,
+      sections: prev.sections.map((sec) => ({
+        ...sec,
+        questions: sec.questions.map((q) => {
+          if (!q.options || q.options.length < 2) return q;
+          // Skip if ['A', 'B', 'C', 'D']
+          const isLetterList = q.options.every(
+            (o, i) => o.trim().toUpperCase() === String.fromCharCode(65 + i)
+          );
+          if (isLetterList) return q;
+          const hasPositionalDependency = q.options.some((o) =>
+            /(?:tất cả|all of the above|cả [A-D]|both [A-D]|neither [A-D])/i.test(o)
+          );
+          if (hasPositionalDependency) return q;
+
+          // Resolve correct answer text first if it was a letter like "A"
+          let resolvedCorrect = q.correctAnswer;
+          const letterMatch = resolvedCorrect.match(/^([A-Da-d])(?:[.)].*)?$/);
+          if (letterMatch && resolvedCorrect.length <= 3) {
+            const idx = letterMatch[1].toUpperCase().charCodeAt(0) - 65;
+            if (q.options[idx]) resolvedCorrect = q.options[idx];
+          }
+
+          const shuffled = [...q.options];
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
+          countShuffled++;
+          return {
+            ...q,
+            options: shuffled,
+            correctAnswer: resolvedCorrect,
+          };
+        }),
+      })),
+    }));
+    setShuffledNotice(true);
+    setTimeout(() => setShuffledNotice(false), 2000);
+  };
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [generatingAudioSecId, setGeneratingAudioSecId] = useState<string | null>(null);
@@ -279,6 +324,26 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
               <Download className="h-3.5 w-3.5" /> Tải .DOCX
             </button>
           </div>
+
+          {/* Shuffle ABCD */}
+          <button
+            type="button"
+            onClick={handleShuffleOptions}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50/80 px-3 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100 shadow-2xs"
+            title="Đảo ngẫu nhiên vị trí các lựa chọn A/B/C/D để phân bố đều đáp án đúng, không bị dồn toàn bộ vào A"
+          >
+            {shuffledNotice ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-700">Đã đảo đáp án ABCD!</span>
+              </>
+            ) : (
+              <>
+                <Shuffle className="h-3.5 w-3.5" />
+                <span>Trộn đáp án ABCD</span>
+              </>
+            )}
+          </button>
 
           {/* Print / PDF */}
           <button
