@@ -545,7 +545,7 @@ export function parseAiHomeworkResponse(
 
           let finalOptions = options;
           if (
-            (qType === 'multiple_choice' || qType === 'find_mistake') &&
+            qType === 'multiple_choice' &&
             options &&
             options.length >= 2
           ) {

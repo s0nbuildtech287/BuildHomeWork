@@ -69,7 +69,7 @@ export const HomeworkEditor: React.FC<HomeworkEditorProps> = ({
       sections: prev.sections.map((sec) => ({
         ...sec,
         questions: sec.questions.map((q) => {
-          if (!q.options || q.options.length < 2) return q;
+          if (q.type !== 'multiple_choice' || !q.options || q.options.length < 2) return q;
           // Skip if ['A', 'B', 'C', 'D']
           const isLetterList = q.options.every(
             (o, i) => o.trim().toUpperCase() === String.fromCharCode(65 + i)
