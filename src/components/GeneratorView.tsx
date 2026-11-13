@@ -70,6 +70,20 @@ const DEFAULT_COUNTS_BY_LEVEL: Record<TargetLevel, SectionCountConfig> = {
     sentence_order: 3,
     rewrite: 2,
   },
+  university_basic: {
+    ...createEmptyCounts(),
+    multiple_choice: 6,
+    true_false_group: 2,
+    short_answer: 4,
+    essay: 2,
+  },
+  university_advanced: {
+    ...createEmptyCounts(),
+    multiple_choice: 6,
+    true_false_group: 2,
+    short_answer: 4,
+    essay: 3,
+  },
 };
 
 export const GeneratorView: React.FC<GeneratorViewProps> = ({

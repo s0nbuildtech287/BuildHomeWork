@@ -17,6 +17,8 @@ const LEVEL_BADGES: Record<TargetLevel, { label: string; cls: string }> = {
   elementary: { label: 'Tiểu học', cls: 'bg-amber-100 text-amber-800' },
   secondary: { label: 'THCS / THPT', cls: 'bg-indigo-100 text-indigo-800' },
   communication: { label: 'Giao tiếp', cls: 'bg-emerald-100 text-emerald-800' },
+  university_basic: { label: 'ĐH Cơ sở', cls: 'bg-purple-100 text-purple-800' },
+  university_advanced: { label: 'ĐH Nâng cao', cls: 'bg-fuchsia-100 text-fuchsia-800' },
 };
 
 export const LibraryView: React.FC<LibraryViewProps> = ({

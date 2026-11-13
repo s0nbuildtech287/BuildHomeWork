@@ -5,9 +5,17 @@ export type SubjectId =
   | 'chemistry'
   | 'literature'
   | 'history'
-  | 'geography';
+  | 'geography'
+  | 'higher_math'
+  | 'philosophy_marx'
+  | 'party_history';
 
-export type TargetLevel = 'elementary' | 'secondary' | 'communication';
+export type TargetLevel =
+  | 'elementary'
+  | 'secondary'
+  | 'communication'
+  | 'university_basic'
+  | 'university_advanced';
 
 export type ListeningStyle = 'multiple_choice' | 'note_fill' | 'matching_box' | 'true_false';
 

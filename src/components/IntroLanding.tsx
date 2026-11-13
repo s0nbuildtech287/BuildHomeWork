@@ -5,14 +5,17 @@ import {
   BookOpenText,
   Calculator,
   CheckCircle2,
+  Compass,
   FileText,
   FlaskConical,
   FolderHeart,
   Globe2,
+  GraduationCap,
   Headphones,
   ImagePlus,
   Landmark,
   Languages,
+  ScrollText,
   Send,
   Sparkles,
   UploadCloud,
@@ -37,6 +40,9 @@ const SUBJECT_ICONS: Record<SubjectId, React.ComponentType<{ className?: string 
   literature: BookOpenText,
   history: Landmark,
   geography: Globe2,
+  higher_math: GraduationCap,
+  philosophy_marx: Compass,
+  party_history: ScrollText,
 };
 
 const PREVIEW_DEMOS: Array<{

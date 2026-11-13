@@ -4,11 +4,14 @@ import {
   BookMarked,
   BookOpenText,
   Calculator,
+  Compass,
   FlaskConical,
   FolderHeart,
   Globe2,
+  GraduationCap,
   Landmark,
   Languages,
+  ScrollText,
   Settings,
   X,
 } from 'lucide-react';
@@ -37,6 +40,9 @@ const SUBJECT_ICONS: Record<SubjectId, React.ComponentType<{ className?: string 
   literature: BookOpenText,
   history: Landmark,
   geography: Globe2,
+  higher_math: GraduationCap,
+  philosophy_marx: Compass,
+  party_history: ScrollText,
 };
 
 export const SidebarNav: React.FC<SidebarNavProps> = ({
@@ -86,11 +92,11 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       {/* Subject List */}
       <div className="flex-1 overflow-y-auto px-3 py-4">
         <div className="mb-2 px-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
-          Soạn bài theo môn
+          Phổ thông (K-12)
         </div>
 
         <nav className="space-y-1">
-          {SUBJECT_LIST.map((subject) => {
+          {SUBJECT_LIST.filter((s) => !['higher_math', 'philosophy_marx', 'party_history'].includes(s.id)).map((subject) => {
             const Icon = SUBJECT_ICONS[subject.id];
             const isActive = activePage === 'generate' && activeSubject === subject.id;
             return (
@@ -111,6 +117,55 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-700 group-hover:shadow-2xs'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className={`truncate text-sm ${isActive ? 'font-bold' : 'font-semibold'}`}>
+                    {subject.name}
+                  </div>
+                  <div className="truncate text-[11px] text-slate-400">
+                    {subject.tagline}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="mt-5 mb-2 flex items-center justify-between px-2">
+          <span className="text-[11px] font-bold tracking-wider text-purple-700 uppercase">
+            Đại học &amp; Cao đẳng
+          </span>
+          <span className="rounded bg-purple-100 px-1.5 py-0.2 text-[10px] font-extrabold text-purple-800">
+            Môn lõi
+          </span>
+        </div>
+
+        <nav className="space-y-1">
+          {SUBJECT_LIST.filter((s) => ['higher_math', 'philosophy_marx', 'party_history'].includes(s.id)).map((subject) => {
+            const Icon = SUBJECT_ICONS[subject.id];
+            const isActive = activePage === 'generate' && activeSubject === subject.id;
+            return (
+              <button
+                key={subject.id}
+                type="button"
+                onClick={() => {
+                  onSelectSubject(subject.id);
+                  onCloseMobile();
+                }}
+                className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                  isActive
+                    ? 'bg-purple-50 text-purple-700 shadow-2xs ring-1 ring-purple-200/80'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition ${
+                    isActive
+                      ? 'bg-purple-600 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-700 group-hover:shadow-2xs'
                   }`}
                 >

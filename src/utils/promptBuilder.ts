@@ -17,6 +17,10 @@ const LEVEL_DESCRIPTIONS: Record<TargetLevel, string> = {
     'Học sinh THCS / THPT Việt Nam (lớp 6–12, bám sát chương trình SGK Global Success / Friends Plus / ôn thi vào 10 & THPT). Câu hỏi có độ phân hóa rõ, bẫy ngữ pháp tự nhiên, giải thích rõ cấu trúc/ngữ pháp bằng tiếng Việt.',
   communication:
     'Học viên Tiếng Anh Giao tiếp / Trung tâm (người đi làm hoặc sinh viên). Tình huống hội thoại tự nhiên, cụm từ thông dụng (collocations, phrasal verbs, functional English), giải thích ngữ cảnh sử dụng thực tế.',
+  university_basic:
+    'Sinh viên Cao đẳng / Đại học (Năm 1, 2) học các môn cơ sở / đại cương. Yêu cầu tính chính xác khoa học, công thức chuẩn mực, thuật ngữ học thuật rõ ràng, giải thích có cơ sở lý luận hoặc bước giải chi tiết.',
+  university_advanced:
+    'Sinh viên Đại học năm cuối / Sau đại học / Học phần chuyên sâu. Yêu cầu bài tập có chiều sâu, tính phân loại cao, chứng minh chặt chẽ hoặc liên hệ vận dụng thực tiễn / mô hình thực tế.',
 };
 
 const DIFFICULTY_LABELS: Record<GeneratorConfig['difficulty'], string> = {
@@ -366,7 +370,15 @@ function buildSubjectHomeworkPrompt(
       : `- Giải thích ngắn gọn, đi thẳng vào công thức/đáp án đúng.`
     : `- Phần "explanation" nêu rõ căn cứ kiến thức / dẫn chứng / thang điểm chấm bài.`;
 
-  return `Bạn là giáo viên môn ${subjectDef.name} giàu kinh nghiệm tại Việt Nam, chuyên thiết kế phiếu bài tập và đề kiểm tra chuẩn chương trình GDPT 2018.
+  const isUniversity =
+    ['higher_math', 'philosophy_marx', 'party_history'].includes(subjectDef.id) ||
+    config.level?.startsWith('university');
+
+  const roleIntro = isUniversity
+    ? `Bạn là giảng viên đại học giàu kinh nghiệm giảng dạy môn ${subjectDef.name} tại các trường Đại học hàng đầu Việt Nam, chuyên biên soạn đề thi, phiếu bài tập thực hành và câu hỏi ôn tập học phần chuẩn mực.`
+    : `Bạn là giáo viên môn ${subjectDef.name} giàu kinh nghiệm tại Việt Nam, chuyên thiết kế phiếu bài tập và đề kiểm tra chuẩn chương trình GDPT 2018.`;
+
+  return `${roleIntro}
 Hãy tạo một bộ bài tập hoàn chỉnh bằng TIẾNG VIỆT cho môn ${subjectDef.name} theo cấu hình sau:
 
 THÔNG TIN BÀI TẬP:
