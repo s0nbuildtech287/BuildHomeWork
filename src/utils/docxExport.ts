@@ -165,25 +165,55 @@ function buildBrandBarTable(
 }
 
 function buildPromptTextRuns(text: string, size = 22): TextRun[] {
-  if (!text || !text.includes('<u>')) {
+  if (!text) {
+    return [new TextRun({ text: '', size })];
+  }
+  const regex = /(<u>[\s\S]*?<\/u>|<b>[\s\S]*?<\/b>|<strong>[\s\S]*?<\/strong>|\*\*[\s\S]*?\*\*)/gi;
+  if (!regex.test(text)) {
     return [new TextRun({ text, size })];
   }
-  const parts = text.split(/(<u>[\s\S]*?<\/u>)/gi);
+  const parts = text.split(regex);
   const runs: TextRun[] = [];
   for (const part of parts) {
     if (!part) continue;
-    const match = part.match(/^<u>([\s\S]*?)<\/u>$/i);
-    if (match) {
+    const uMatch = part.match(/^<u>([\s\S]*?)<\/u>$/i);
+    if (uMatch) {
+      const inner = uMatch[1];
+      const isBold = /<\/?(?:b|strong)>|\*\*/i.test(inner);
+      const cleanInner = inner.replace(/<\/?(?:b|strong)>/gi, '').replace(/\*\*/g, '');
       runs.push(
         new TextRun({
-          text: match[1],
+          text: cleanInner,
           size,
+          bold: isBold,
           underline: { type: UnderlineType.SINGLE },
         })
       );
-    } else {
-      runs.push(new TextRun({ text: part, size }));
+      continue;
     }
+    const bMatch = part.match(/^(?:<b>|<strong>)([\s\S]*?)(?:<\/b>|<\/strong>)$/i);
+    if (bMatch) {
+      runs.push(
+        new TextRun({
+          text: bMatch[1],
+          size,
+          bold: true,
+        })
+      );
+      continue;
+    }
+    const mdBoldMatch = part.match(/^\*\*([\s\S]*?)\*\*$/);
+    if (mdBoldMatch) {
+      runs.push(
+        new TextRun({
+          text: mdBoldMatch[1],
+          size,
+          bold: true,
+        })
+      );
+      continue;
+    }
+    runs.push(new TextRun({ text: part, size }));
   }
   return runs.length > 0 ? runs : [new TextRun({ text, size })];
 }

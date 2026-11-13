@@ -52,16 +52,34 @@ function renderKatexHtml(expr: string, displayMode: boolean): string | null {
   }
 }
 
-function renderPlainWithUnderline(text: string): React.ReactNode {
-  if (!text || !text.includes('<u>')) return text;
-  const parts = text.split(/(<u>[\s\S]*?<\/u>)/gi);
+function renderFormattedText(text: string): React.ReactNode {
+  if (!text) return text;
+  const regex = /(<u>[\s\S]*?<\/u>|<b>[\s\S]*?<\/b>|<strong>[\s\S]*?<\/strong>|\*\*[\s\S]*?\*\*)/gi;
+  const parts = text.split(regex);
   return parts.map((part, i) => {
-    const match = part.match(/^<u>([\s\S]*?)<\/u>$/i);
-    if (match) {
+    if (!part) return null;
+    const uMatch = part.match(/^<u>([\s\S]*?)<\/u>$/i);
+    if (uMatch) {
       return (
-        <u key={i} className="underline decoration-slate-800 underline-offset-2">
-          {match[1]}
+        <u key={i} className="font-semibold underline decoration-slate-800 underline-offset-2">
+          {renderFormattedText(uMatch[1])}
         </u>
+      );
+    }
+    const bMatch = part.match(/^(?:<b>|<strong>)([\s\S]*?)(?:<\/b>|<\/strong>)$/i);
+    if (bMatch) {
+      return (
+        <strong key={i} className="font-bold text-slate-900">
+          {renderFormattedText(bMatch[1])}
+        </strong>
+      );
+    }
+    const mdBoldMatch = part.match(/^\*\*([\s\S]*?)\*\*$/);
+    if (mdBoldMatch) {
+      return (
+        <strong key={i} className="font-bold text-slate-900">
+          {renderFormattedText(mdBoldMatch[1])}
+        </strong>
       );
     }
     return <React.Fragment key={i}>{part}</React.Fragment>;
@@ -72,14 +90,14 @@ export const MathText: React.FC<MathTextProps> = ({ text, className }) => {
   const segments = useMemo(() => splitMathSegments(text), [text]);
 
   if (segments.length === 1 && segments[0].kind === 'text') {
-    return <span className={className}>{renderPlainWithUnderline(text)}</span>;
+    return <span className={className}>{renderFormattedText(text)}</span>;
   }
 
   return (
     <span className={className}>
       {segments.map((seg, idx) => {
         if (seg.kind === 'text') {
-          return <React.Fragment key={idx}>{renderPlainWithUnderline(seg.content)}</React.Fragment>;
+          return <React.Fragment key={idx}>{renderFormattedText(seg.content)}</React.Fragment>;
         }
         const html = renderKatexHtml(seg.content, seg.kind === 'block');
         if (!html) {

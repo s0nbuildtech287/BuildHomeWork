@@ -191,7 +191,8 @@ export const VocabQuizModal: React.FC<VocabQuizModalProps> = ({
     setSections((prev) =>
       prev.map((s) => {
         if (s.key !== key) return s;
-        const next = Math.max(1, Math.min(30, s.count + delta));
+        const maxVal = Math.max(200, wordCount);
+        const next = Math.max(1, Math.min(maxVal, s.count + delta));
         return { ...s, count: next, checked: true };
       })
     );
@@ -201,13 +202,29 @@ export const VocabQuizModal: React.FC<VocabQuizModalProps> = ({
     key: keyof VocabQuizModalApplyData['counts'],
     val: number
   ) => {
-    const safe = Number.isNaN(val) ? 0 : Math.max(0, Math.min(50, Math.floor(val)));
+    const maxVal = Math.max(200, wordCount);
+    const safe = Number.isNaN(val) ? 0 : Math.max(0, Math.min(maxVal, Math.floor(val)));
     setSections((prev) =>
       prev.map((s) => {
         if (s.key !== key) return s;
         return { ...s, count: safe, checked: safe > 0 };
       })
     );
+  };
+
+  const handleSelectAllWords = () => {
+    if (wordCount === 0) return;
+    // Set first active section to exactly wordCount, so not a single word is missed!
+    setSections((prev) => {
+      const activeIdx = prev.findIndex((s) => s.checked);
+      const targetIdx = activeIdx >= 0 ? activeIdx : 0;
+      return prev.map((s, idx) => {
+        if (idx === targetIdx) {
+          return { ...s, count: wordCount, checked: true };
+        }
+        return { ...s, count: 0, checked: false };
+      });
+    });
   };
 
   const handlePasteSample = () => {
@@ -353,13 +370,25 @@ export const VocabQuizModal: React.FC<VocabQuizModalProps> = ({
 
           {/* Section rows with checkboxes & number counter */}
           <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-bold text-slate-800">
                 Chọn dạng bài &amp; chỉnh số câu cho từng dạng:
               </span>
-              <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-800">
-                Tổng: {totalQuestions} câu
-              </span>
+              <div className="flex items-center gap-2">
+                {wordCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleSelectAllWords}
+                    className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 ring-1 ring-purple-200 hover:bg-purple-100"
+                    title="Đặt số câu bằng đúng số lượng từ đã dán để kiểm tra toàn bộ không bị sót từ"
+                  >
+                    ⚡ Kiểm tra đủ {wordCount} từ (1 từ / 1 câu)
+                  </button>
+                )}
+                <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-800">
+                  Tổng: {totalQuestions} câu
+                </span>
+              </div>
             </div>
 
             <div className="divide-y divide-slate-200/80 rounded-lg border border-slate-200 bg-white">
@@ -396,10 +425,10 @@ export const VocabQuizModal: React.FC<VocabQuizModalProps> = ({
                     <input
                       type="number"
                       min={0}
-                      max={50}
+                      max={Math.max(200, wordCount)}
                       value={sec.count}
                       onChange={(e) => setExactCount(sec.key, parseInt(e.target.value, 10))}
-                      className="h-7 w-12 rounded-lg border border-slate-300 bg-white text-center text-xs font-bold text-slate-800 focus:border-purple-500 focus:outline-none"
+                      className="h-7 w-14 rounded-lg border border-slate-300 bg-white text-center text-xs font-bold text-slate-800 focus:border-purple-500 focus:outline-none"
                     />
                     <button
                       type="button"
