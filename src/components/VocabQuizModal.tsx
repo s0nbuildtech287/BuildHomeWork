@@ -16,6 +16,8 @@ export interface VocabQuizModalApplyData {
     closest_meaning: number;
     vocab_en_to_vi: number;
     vocab_vi_to_en: number;
+    vocab_write_en: number;
+    vocab_write_vi: number;
     multiple_choice: number;
     fill_blank: number;
     word_form: number;
@@ -110,16 +112,30 @@ export const VocabQuizModal: React.FC<VocabQuizModalProps> = ({
   const [sections, setSections] = useState<SectionRowConfig[]>([
     {
       key: 'vocab_en_to_vi',
-      label: 'Dịch Anh → Việt',
+      label: 'Dịch Anh → Việt (Trắc nghiệm)',
       desc: 'Cho từ tiếng Anh, chọn nghĩa tiếng Việt đúng (A/B/C/D)',
       checked: true,
       count: 4,
     },
     {
       key: 'vocab_vi_to_en',
-      label: 'Dịch Việt → Anh',
+      label: 'Dịch Việt → Anh (Trắc nghiệm)',
       desc: 'Cho nghĩa tiếng Việt, chọn từ tiếng Anh đúng (A/B/C/D)',
       checked: true,
+      count: 4,
+    },
+    {
+      key: 'vocab_write_en',
+      label: 'Viết từ tiếng Anh 1-1 (Tự điền - Không A/B/C/D)',
+      desc: 'Cho nghĩa tiếng Việt, học sinh tự viết từ tiếng Anh bên cạnh (VD: hàng rào → fence)',
+      checked: false,
+      count: 4,
+    },
+    {
+      key: 'vocab_write_vi',
+      label: 'Viết nghĩa tiếng Việt 1-1 (Tự điền - Không A/B/C/D)',
+      desc: 'Cho từ tiếng Anh, học sinh tự viết nghĩa tiếng Việt bên cạnh (VD: fence → hàng rào)',
+      checked: false,
       count: 4,
     },
     {
@@ -255,6 +271,8 @@ export const VocabQuizModal: React.FC<VocabQuizModalProps> = ({
       closest_meaning: 0,
       vocab_en_to_vi: 0,
       vocab_vi_to_en: 0,
+      vocab_write_en: 0,
+      vocab_write_vi: 0,
       multiple_choice: 0,
       fill_blank: 0,
       word_form: 0,

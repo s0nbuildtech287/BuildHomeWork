@@ -83,6 +83,16 @@ export function buildHomeworkPrompt(
       `- "vocab_vi_to_en": 1 section Dịch nghĩa Việt → Anh (${config.counts.vocab_vi_to_en} câu, type="multiple_choice"): instruction ghi "Choose the correct English word for each Vietnamese meaning."; "prompt" ghi nghĩa tiếng Việt ĐƯỢC IN ĐẬM dạng <b>nghĩa</b> (VD: "Từ nào trong tiếng Anh có nghĩa là <b>\\"hàng rào\\"</b>?"); "options" gồm 4 từ tiếng Anh (không kèm A./B./C./D.); "correctAnswer" ghi đúng từ tiếng Anh.`
     );
   }
+  if (config.counts.vocab_write_en > 0) {
+    requestedParts.push(
+      `- "vocab_write_en": 1 section Viết từ tiếng Anh 1-1 (${config.counts.vocab_write_en} câu, BẮT BUỘC DÙNG type="fill_blank", TUYỆT ĐỐI KHÔNG CÓ OPTIONS A/B/C/D): instruction ghi "Write the correct English word for each Vietnamese meaning."; mỗi câu "prompt" ghi nghĩa tiếng Việt có chỗ trống để học sinh tự điền từ tiếng Anh bên cạnh (VD: "<b>hàng rào</b>: ______" hoặc "<b>cây cối</b>: ______"); TUYỆT ĐỐI KHÔNG TẠO mảng "options" (hoặc để options: []); "correctAnswer" ghi từ tiếng Anh chính xác (kèm các biến thể chấp nhận được cách nhau bởi " | ", VD: "fence | a fence"); "explanation" ghi phiên âm và ví dụ câu ngắn.`
+    );
+  }
+  if (config.counts.vocab_write_vi > 0) {
+    requestedParts.push(
+      `- "vocab_write_vi": 1 section Viết nghĩa tiếng Việt 1-1 (${config.counts.vocab_write_vi} câu, BẮT BUỘC DÙNG type="fill_blank", TUYỆT ĐỐI KHÔNG CÓ OPTIONS A/B/C/D): instruction ghi "Write the correct Vietnamese meaning for each English word."; mỗi câu "prompt" ghi từ tiếng Anh (kèm loại từ/phiên âm nếu có) có chỗ trống để học sinh tự điền nghĩa tiếng Việt bên cạnh (VD: "<b>fence</b> (/fˈɛns/): ______" hoặc "<b>plant</b> (/plˈænt/): ______"); TUYỆT ĐỐI KHÔNG TẠO mảng "options" (hoặc để options: []); "correctAnswer" ghi nghĩa tiếng Việt chính xác (kèm các từ đồng nghĩa cách nhau bởi " | ", VD: "hàng rào | cái hàng rào"); "explanation" giải thích nghĩa chi tiết.`
+    );
+  }
   if (config.counts.announcement_cloze > 0) {
     requestedParts.push(
       `- "announcement_cloze": 1 section Thông báo / Quảng cáo điền từ (type="multiple_choice") gồm 1 mẫu thông báo/tờ rơi ngắn để trong "readingPassage" có ${config.counts.announcement_cloze} chỗ trống đánh số (1), (2)...; instruction ghi chuẩn "Read the following announcement and mark the letter A, B, C or D on your answer sheet to indicate the correct option that best fits each of the numbered blanks." kèm ${config.counts.announcement_cloze} câu hỏi A/B/C/D.`
@@ -278,6 +288,16 @@ function buildSubjectHomeworkPrompt(
   if (config.counts.vocab_vi_to_en > 0) {
     requestedParts.push(
       `- "vocab_vi_to_en": 1 section Dịch nghĩa Việt → Anh (${config.counts.vocab_vi_to_en} câu, type="multiple_choice"): instruction ghi "Choose the correct English word for each Vietnamese meaning."; "prompt" ghi nghĩa tiếng Việt ĐƯỢC IN ĐẬM dạng <b>nghĩa</b> (VD: "Từ nào trong tiếng Anh có nghĩa là <b>\\"hàng rào\\"</b>?"); "options" gồm 4 từ tiếng Anh (không kèm A./B./C./D.); "correctAnswer" ghi đúng từ tiếng Anh.`
+    );
+  }
+  if (config.counts.vocab_write_en > 0) {
+    requestedParts.push(
+      `- "vocab_write_en": 1 section Viết từ tiếng Anh 1-1 (${config.counts.vocab_write_en} câu, BẮT BUỘC DÙNG type="fill_blank", TUYỆT ĐỐI KHÔNG CÓ OPTIONS A/B/C/D): instruction ghi "Write the correct English word for each Vietnamese meaning."; mỗi câu "prompt" ghi nghĩa tiếng Việt có chỗ trống để học sinh tự điền từ tiếng Anh bên cạnh (VD: "<b>hàng rào</b>: ______" hoặc "<b>cây cối</b>: ______"); TUYỆT ĐỐI KHÔNG TẠO mảng "options" (hoặc để options: []); "correctAnswer" ghi từ tiếng Anh chính xác (kèm các biến thể chấp nhận được cách nhau bởi " | ", VD: "fence | a fence"); "explanation" ghi phiên âm và ví dụ câu ngắn.`
+    );
+  }
+  if (config.counts.vocab_write_vi > 0) {
+    requestedParts.push(
+      `- "vocab_write_vi": 1 section Viết nghĩa tiếng Việt 1-1 (${config.counts.vocab_write_vi} câu, BẮT BUỘC DÙNG type="fill_blank", TUYỆT ĐỐI KHÔNG CÓ OPTIONS A/B/C/D): instruction ghi "Write the correct Vietnamese meaning for each English word."; mỗi câu "prompt" ghi từ tiếng Anh (kèm loại từ/phiên âm nếu có) có chỗ trống để học sinh tự điền nghĩa tiếng Việt bên cạnh (VD: "<b>fence</b> (/fˈɛns/): ______" hoặc "<b>plant</b> (/plˈænt/): ______"); TUYỆT ĐỐI KHÔNG TẠO mảng "options" (hoặc để options: []); "correctAnswer" ghi nghĩa tiếng Việt chính xác (kèm các từ đồng nghĩa cách nhau bởi " | ", VD: "hàng rào | cái hàng rào"); "explanation" giải thích nghĩa chi tiết.`
     );
   }
   if (config.counts.announcement_cloze > 0) {
@@ -565,6 +585,13 @@ export function parseAiHomeworkResponse(
               }
               finalOptions = shuffled;
             }
+          }
+
+          if (
+            qType === 'fill_blank' &&
+            (!sec.wordBank || (Array.isArray(sec.wordBank) && sec.wordBank.length === 0))
+          ) {
+            finalOptions = undefined;
           }
 
           const prompt = String(q.prompt ?? '').trim();
