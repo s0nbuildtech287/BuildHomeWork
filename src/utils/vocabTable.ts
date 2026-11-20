@@ -75,14 +75,30 @@ export function parseVocabTableRow(
     if (!phonetic.startsWith('/')) phonetic = `/${phonetic}/`;
   }
 
-  // Extract phonetic from prompt e.g. (/ˌvjetnəˈmiːz/) or /ˌvjetnəˈmiːz/
-  const pMatch = raw.match(/\(\/([^)]+?)\/\)|\/([^\s,)]+?)\//);
-  if (pMatch) {
-    if (!phonetic) {
-      const p = pMatch[1] || pMatch[2] || '';
-      phonetic = p.startsWith('/') ? p : `/${p}/`;
+  // 1. Match phonetic in parentheses with slashes: (/.../) e.g. (/ˈsɪŋə(r)/), (/ˌaɪ ˈtiː/)
+  const parenSlashMatch = raw.match(/\(\s*(\/[^\/\n]+?\/)\s*\)/);
+  if (parenSlashMatch) {
+    if (!phonetic) phonetic = parenSlashMatch[1].trim();
+    raw = raw.replace(parenSlashMatch[0], '').trim();
+  } else {
+    // 2. Match bare slashes: /.../ e.g. /ˈsɪŋə(r)/ or /ˌaɪ ˈtiː/
+    const bareSlashMatch = raw.match(/(?:^|\s)(\/[^\/\n]{2,}\/)(?=[^a-zA-Z0-9]|$)/);
+    if (bareSlashMatch) {
+      if (!phonetic) phonetic = bareSlashMatch[1].trim();
+      raw = raw.replace(bareSlashMatch[1], '').trim();
+    } else {
+      // 3. Fallback: match parentheses containing IPA characters e.g. (ˈsɪŋə(r))
+      const ipaParenMatch = raw.match(
+        /\(\s*([ˈˌəɪiːuːeɪæθðʃʒtʃdʒŋɑːɔːʊaɪaʊɔɪɪəeəʊə][^)]*?)\s*\)/
+      );
+      if (ipaParenMatch) {
+        if (!phonetic) {
+          const inner = ipaParenMatch[1].trim();
+          phonetic = inner.startsWith('/') ? inner : `/${inner}/`;
+        }
+        raw = raw.replace(ipaParenMatch[0], '').trim();
+      }
     }
-    raw = raw.replace(pMatch[0], '').trim();
   }
 
   // Clean HTML/markdown tags
