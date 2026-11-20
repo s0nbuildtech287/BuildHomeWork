@@ -11,6 +11,11 @@ import {
   splitFormattedLines,
   stripOptionPrefix,
 } from '../utils/grading';
+import {
+  isSectionWritingEnglish,
+  isVocabTableSection,
+  parseVocabTableRow,
+} from '../utils/vocabTable';
 
 interface PrintWorksheetProps {
   homework: Homework;
@@ -155,97 +160,151 @@ export const PrintWorksheet: React.FC<PrintWorksheetProps> = ({ homework, onBack
                 </div>
               )}
 
-              <div className="space-y-2.5">
-                {section.questions.map((q) => {
-                  const qNum = questionCounter++;
-                  let displayCorrect = q.correctAnswer;
-                  if (isChoiceQuestion(q) && q.options?.length) {
-                    const idx = resolveCorrectOptionIndex(q);
-                    if (idx >= 0) {
-                      displayCorrect = `${String.fromCharCode(65 + idx)}. ${stripOptionPrefix(
-                        q.options[idx]
-                      )}`;
+              {isVocabTableSection(section) ? (
+                <div className="avoid-break my-3 overflow-hidden rounded-lg border border-slate-400">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-400 bg-slate-100 text-xs font-bold text-slate-800">
+                        <th className="w-[8%] py-2 text-center border-r border-slate-300">STT</th>
+                        <th className="w-[34%] px-3 py-2 text-left border-r border-slate-300">
+                          {isSectionWritingEnglish(section) ? 'Nghĩa tiếng Việt' : 'Từ vựng (Word)'}
+                        </th>
+                        <th className="w-[24%] px-3 py-2 text-center border-r border-slate-300">Phiên âm</th>
+                        <th className="w-[34%] px-3 py-2 text-left">
+                          {isSectionWritingEnglish(section) ? 'Từ tiếng Anh' : 'Nghĩa tiếng Việt'}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-300">
+                      {section.questions.map((q) => {
+                        const qNum = questionCounter++;
+                        const parsed = parseVocabTableRow(
+                          q,
+                          qNum,
+                          isSectionWritingEnglish(section)
+                        );
+                        answerSummary.push({
+                          num: qNum,
+                          answer: parsed.answer,
+                          explanation: q.explanation || '',
+                        });
+                        return (
+                          <tr key={q.id} className="min-h-[42px]">
+                            <td className="py-2.5 text-center font-bold text-slate-800 border-r border-slate-300">
+                              {parsed.num}.
+                            </td>
+                            <td className="px-3 py-2.5 font-bold text-slate-900 border-r border-slate-300">
+                              {parsed.wordOrMeaning}
+                            </td>
+                            <td className="px-3 py-2.5 text-center text-slate-600 font-mono text-xs border-r border-slate-300">
+                              {parsed.phonetic || '—'}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              {mode === 'teacher' ? (
+                                <span className="font-semibold text-emerald-700">{parsed.answer}</span>
+                              ) : (
+                                <span className="inline-block h-6 w-full"></span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {section.questions.map((q) => {
+                    const qNum = questionCounter++;
+                    let displayCorrect = q.correctAnswer;
+                    if (isChoiceQuestion(q) && q.options?.length) {
+                      const idx = resolveCorrectOptionIndex(q);
+                      if (idx >= 0) {
+                        displayCorrect = `${String.fromCharCode(65 + idx)}. ${stripOptionPrefix(
+                          q.options[idx]
+                        )}`;
+                      }
                     }
-                  }
-                  answerSummary.push({
-                    num: qNum,
-                    answer: displayCorrect,
-                    explanation: q.explanation,
-                  });
+                    answerSummary.push({
+                      num: qNum,
+                      answer: displayCorrect,
+                      explanation: q.explanation,
+                    });
 
-                  return (
-                    <div key={q.id} className="avoid-break text-[14px] leading-relaxed">
-                      {q.type === 'sentence_order' && q.words?.length ? (
-                        <div>
-                          <p>
-                            <strong>{qNum}.</strong> {q.words.join(' / ')}
+                    return (
+                      <div key={q.id} className="avoid-break text-[14px] leading-relaxed">
+                        {q.type === 'sentence_order' && q.words?.length ? (
+                          <div>
+                            <p>
+                              <strong>{qNum}.</strong> {q.words.join(' / ')}
+                            </p>
+                            <p className="mt-1 pl-5 text-slate-500">
+                              → ..........................................................................................................
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-line">
+                            <strong>{qNum}.</strong> <MathText text={splitFormattedLines(q.prompt).join('\n')} />
                           </p>
+                        )}
+
+                        {q.imageUrl && (
+                          <div className="mt-1.5 pl-5">
+                            <img
+                              src={q.imageUrl}
+                              alt={`Hình câu ${qNum}`}
+                              className="max-h-48 w-auto rounded border border-slate-300 object-contain"
+                            />
+                          </div>
+                        )}
+
+                        {isChoiceQuestion(q) && q.options?.length && (() => {
+                          const formattedList = q.options.map((opt, idx) =>
+                            formatMcqOptionDisplay(opt, idx)
+                          );
+                          const maxLen = Math.max(...formattedList.map((x) => x.full.length), 0);
+                          const gridCls =
+                            maxLen > 38
+                              ? 'grid-cols-1'
+                              : maxLen <= 16 && formattedList.length === 4
+                                ? 'grid-cols-4'
+                                : 'grid-cols-2';
+                          return (
+                            <div className={`mt-1 grid ${gridCls} gap-x-6 gap-y-1 pl-5`}>
+                              {formattedList.map((formatted, idx) => (
+                                <span key={idx}>
+                                  <strong>{formatted.letter}.</strong>
+                                  {formatted.text ? (
+                                    <>
+                                      {' '}
+                                      <MathText text={formatted.text} />
+                                    </>
+                                  ) : null}
+                                </span>
+                              ))}
+                            </div>
+                          );
+                        })()}
+
+                        {q.type === 'rewrite' && !q.prompt.includes('____') && (
                           <p className="mt-1 pl-5 text-slate-500">
                             → ..........................................................................................................
                           </p>
-                        </div>
-                      ) : (
-                        <p className="whitespace-pre-line">
-                          <strong>{qNum}.</strong> <MathText text={splitFormattedLines(q.prompt).join('\n')} />
-                        </p>
-                      )}
+                        )}
 
-                      {q.imageUrl && (
-                        <div className="mt-1.5 pl-5">
-                          <img
-                            src={q.imageUrl}
-                            alt={`Hình câu ${qNum}`}
-                            className="max-h-48 w-auto rounded border border-slate-300 object-contain"
-                          />
-                        </div>
-                      )}
-
-                      {isChoiceQuestion(q) && q.options?.length && (() => {
-                        const formattedList = q.options.map((opt, idx) =>
-                          formatMcqOptionDisplay(opt, idx)
-                        );
-                        const maxLen = Math.max(...formattedList.map((x) => x.full.length), 0);
-                        const gridCls =
-                          maxLen > 38
-                            ? 'grid-cols-1'
-                            : maxLen <= 16 && formattedList.length === 4
-                              ? 'grid-cols-4'
-                              : 'grid-cols-2';
-                        return (
-                          <div className={`mt-1 grid ${gridCls} gap-x-6 gap-y-1 pl-5`}>
-                            {formattedList.map((formatted, idx) => (
-                              <span key={idx}>
-                                <strong>{formatted.letter}.</strong>
-                                {formatted.text ? (
-                                  <>
-                                    {' '}
-                                    <MathText text={formatted.text} />
-                                  </>
-                                ) : null}
-                              </span>
-                            ))}
+                        {isEssayQuestion(q) && (
+                          <div className="mt-2 space-y-2 pl-5 text-slate-400">
+                            <p>................................................................................................................</p>
+                            <p>................................................................................................................</p>
+                            <p>................................................................................................................</p>
+                            <p>................................................................................................................</p>
                           </div>
-                        );
-                      })()}
-
-                      {q.type === 'rewrite' && !q.prompt.includes('____') && (
-                        <p className="mt-1 pl-5 text-slate-500">
-                          → ..........................................................................................................
-                        </p>
-                      )}
-
-                      {isEssayQuestion(q) && (
-                        <div className="mt-2 space-y-2 pl-5 text-slate-400">
-                          <p>................................................................................................................</p>
-                          <p>................................................................................................................</p>
-                          <p>................................................................................................................</p>
-                          <p>................................................................................................................</p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ))}
         </div>

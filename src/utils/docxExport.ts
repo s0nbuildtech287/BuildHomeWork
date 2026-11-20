@@ -28,6 +28,11 @@ import {
   splitFormattedLines,
   stripOptionPrefix,
 } from './grading';
+import {
+  isSectionWritingEnglish,
+  isVocabTableSection,
+  parseVocabTableRow,
+} from './vocabTable';
 
 export type DocxExportMode = 'student' | 'student_with_key' | 'teacher';
 
@@ -536,6 +541,195 @@ export async function exportHomeworkToDocx(
           })
         );
       });
+    }
+
+    if (isVocabTableSection(section)) {
+      const isWriteEn = isSectionWritingEnglish(section);
+      const colWidths = [8, 34, 24, 34];
+
+      const tableBorder = { style: BorderStyle.SINGLE, size: 6, color: '334155' };
+      const cellBorders = {
+        top: tableBorder,
+        bottom: tableBorder,
+        left: tableBorder,
+        right: tableBorder,
+      };
+      const cellMargins = { top: 75, bottom: 75, left: 110, right: 110 };
+
+      // Header row
+      const headerRow = new TableRow({
+        tableHeader: true,
+        children: [
+          new TableCell({
+            width: { size: colWidths[0], type: WidthType.PERCENTAGE },
+            borders: cellBorders,
+            margins: cellMargins,
+            shading: { type: ShadingType.CLEAR, fill: 'F1F5F9', color: 'auto' },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 0, after: 0 },
+                children: [new TextRun({ text: 'STT', bold: true, size: 20 })],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: colWidths[1], type: WidthType.PERCENTAGE },
+            borders: cellBorders,
+            margins: cellMargins,
+            shading: { type: ShadingType.CLEAR, fill: 'F1F5F9', color: 'auto' },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new TextRun({
+                    text: isWriteEn ? 'Nghĩa tiếng Việt' : 'Từ vựng (Word)',
+                    bold: true,
+                    size: 20,
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: colWidths[2], type: WidthType.PERCENTAGE },
+            borders: cellBorders,
+            margins: cellMargins,
+            shading: { type: ShadingType.CLEAR, fill: 'F1F5F9', color: 'auto' },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 0, after: 0 },
+                children: [new TextRun({ text: 'Phiên âm', bold: true, size: 20 })],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: colWidths[3], type: WidthType.PERCENTAGE },
+            borders: cellBorders,
+            margins: cellMargins,
+            shading: { type: ShadingType.CLEAR, fill: 'F1F5F9', color: 'auto' },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new TextRun({
+                    text: isWriteEn ? 'Từ tiếng Anh' : 'Nghĩa tiếng Việt',
+                    bold: true,
+                    size: 20,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const tableRows: TableRow[] = [headerRow];
+
+      for (const q of section.questions) {
+        const qNum = globalIndex++;
+        const parsed = parseVocabTableRow(q, qNum, isWriteEn);
+
+        answerRows.push({
+          num: qNum,
+          answer: parsed.answer,
+          explanation: q.explanation || '',
+        });
+
+        tableRows.push(
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: colWidths[0], type: WidthType.PERCENTAGE },
+                borders: cellBorders,
+                margins: cellMargins,
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 0, after: 0 },
+                    children: [new TextRun({ text: `${qNum}.`, bold: true, size: 21 })],
+                  }),
+                ],
+              }),
+              new TableCell({
+                width: { size: colWidths[1], type: WidthType.PERCENTAGE },
+                borders: cellBorders,
+                margins: cellMargins,
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.LEFT,
+                    spacing: { before: 0, after: 0 },
+                    children: [new TextRun({ text: parsed.wordOrMeaning, bold: true, size: 21 })],
+                  }),
+                ],
+              }),
+              new TableCell({
+                width: { size: colWidths[2], type: WidthType.PERCENTAGE },
+                borders: cellBorders,
+                margins: cellMargins,
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 0, after: 0 },
+                    children: [
+                      new TextRun({
+                        text: parsed.phonetic || '—',
+                        size: 20,
+                        color: '334155',
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+              new TableCell({
+                width: { size: colWidths[3], type: WidthType.PERCENTAGE },
+                borders: cellBorders,
+                margins: cellMargins,
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.LEFT,
+                    spacing: {
+                      before: mode === 'teacher' ? 0 : 80,
+                      after: mode === 'teacher' ? 0 : 80,
+                    },
+                    children:
+                      mode === 'teacher'
+                        ? [
+                            new TextRun({
+                              text: parsed.answer,
+                              bold: true,
+                              size: 21,
+                              color: '15803D',
+                            }),
+                          ]
+                        : [new TextRun({ text: '', size: 21 })],
+                  }),
+                ],
+              }),
+            ],
+          })
+        );
+      }
+
+      children.push(
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: {
+            top: tableBorder,
+            bottom: tableBorder,
+            left: tableBorder,
+            right: tableBorder,
+            insideHorizontal: tableBorder,
+            insideVertical: tableBorder,
+          },
+          rows: tableRows,
+        })
+      );
+      children.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
+      continue;
     }
 
     for (const q of section.questions) {
